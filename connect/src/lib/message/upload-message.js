@@ -115,10 +115,21 @@ export function uploadMessageWith (env) {
     return of(ctx)
       .chain(buildTags)
       .chain(buildData)
-      .chain(fromPromise(({ id, data, tags, anchor, signer }) => {
-        return deployMessage({ processId: id, data, tags, anchor, signer: signerSchema.implement(signer || env.signer) })
+      .chain(fromPromise(({ id, data, tags, anchor, signer, returnAssignmentSlot }) => {
+        return deployMessage({
+          processId: id,
+          data,
+          tags,
+          anchor,
+          signer: signerSchema.implement(signer || env.signer),
+          returnAssignmentSlot
+        })
       }))
-      .map(res => assoc('messageId', res.messageId, ctx))
+      .map(res => ({
+        ...ctx,
+        messageId: res.messageId,
+        assignmentSlot: res.assignmentSlot
+      }))
   }
 }
 

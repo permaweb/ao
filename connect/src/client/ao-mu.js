@@ -11,7 +11,7 @@ function signDataItemChain (args, logger) {
     .map(logger.tap('Successfully built and signed data item'))
 }
 
-function sendDataItemChain (signedDataItem, { fetch, MU_URL, logger, verifyBeforeSend = false }) {
+function sendDataItemChain (signedDataItem, { fetch, MU_URL, locate, logger, verifyBeforeSend = false, returnAssignmentSlot = false, processId }) {
   let chain = of(signedDataItem)
   if (verifyBeforeSend) {
     chain = chain.chain(fromPromise(async (item) => {
@@ -50,6 +50,21 @@ function sendDataItemChain (signedDataItem, { fetch, MU_URL, logger, verifyBefor
       logger.tap('Successfully wrote message via MU')
     )
     .map((res) => ({ res, messageId: signedDataItem.id }))
+    .chain(fromPromise(async (result) => {
+      if (!returnAssignmentSlot) return result
+
+      if (!locate) throw new Error('locate function is required when returnAssignmentSlot is true')
+      if (!processId) throw new Error('processId is required when returnAssignmentSlot is true')
+
+      const suUrl = (await locate(processId)).url
+      const suRes = await fetch(`${suUrl}/${result.messageId}?process-id=${processId}`)
+      if (!suRes.ok) throw new Error(`${suRes.status}: ${await suRes.text()}`)
+
+      const suData = await suRes.json()
+      const assignmentSlot = suData?.assignment?.tags?.find(tag => tag.name === 'Nonce')?.value
+
+      return { ...result, assignmentSlot }
+    }))
 }
 
 /**
@@ -70,11 +85,18 @@ function sendDataItemChain (signedDataItem, { fetch, MU_URL, logger, verifyBefor
  * @param {Env3} env
  * @returns {WriteMessage2}
  */
-export function deployMessageWith ({ fetch, MU_URL, logger: _logger }) {
+export function deployMessageWith ({ fetch, MU_URL, locate, logger: _logger }) {
   const logger = _logger.child('deployMessage')
   return (args) => {
     return signDataItemChain(args, logger)
-      .chain((signedDataItem) => sendDataItemChain(signedDataItem, { fetch, MU_URL, logger }))
+      .chain((signedDataItem) => sendDataItemChain(signedDataItem, {
+        fetch,
+        MU_URL,
+        locate,
+        logger,
+        returnAssignmentSlot: args.returnAssignmentSlot,
+        processId: args.processId
+      }))
       .toPromise()
   }
 }

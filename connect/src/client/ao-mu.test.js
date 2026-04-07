@@ -163,6 +163,77 @@ describe('ao-mu', () => {
         messageId: 'data-item-123'
       })
     })
+
+    test('return assignment slot when returnAssignmentSlot is true', async () => {
+      let suFetchCalled = false
+      let muFetchCalled = false
+      const deployMessage = deployMessageWith({
+        MU_URL,
+        logger,
+        locate: async (processId) => {
+          assert.equal(processId, 'process-123')
+          return { url: 'https://su-router.ao-testnet.xyz' }
+        },
+        fetch: async (url, options) => {
+          if (url === MU_URL) {
+            muFetchCalled = true
+            assert.deepStrictEqual(options, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/octet-stream',
+                Accept: 'application/json'
+              },
+              redirect: 'follow',
+              body: 'raw-buffer'
+            })
+            return new Response(JSON.stringify({ message: 'foobar' }))
+          } else if (url === 'https://su-router.ao-testnet.xyz/data-item-123?process-id=process-123') {
+            suFetchCalled = true
+            return new Response(JSON.stringify({
+              assignment: {
+                tags: [
+                  { name: 'Nonce', value: '42' }
+                ]
+              }
+            }))
+          }
+          throw new Error(`Unexpected URL: ${url}`)
+        }
+      })
+
+      const res = await deployMessage({
+        processId: 'process-123',
+        data: 'data-123',
+        tags: [
+          { name: 'foo', value: 'bar' },
+          { name: 'Content-Type', value: 'text/plain' }
+        ],
+        anchor: 'idempotent-123',
+        returnAssignmentSlot: true,
+        signer: signerSchema.implement(
+          async (create) => {
+            const { data, tags, target, anchor } = await create({ passthrough: true })
+            assert.ok(data)
+            assert.deepStrictEqual(tags, [
+              { name: 'foo', value: 'bar' },
+              { name: 'Content-Type', value: 'text/plain' }
+            ])
+            assert.equal(target, 'process-123')
+            assert.equal(anchor, 'idempotent-123')
+
+            return { id: 'data-item-123', raw: 'raw-buffer' }
+          }
+        )
+      })
+
+      assert.ok(muFetchCalled, 'MU fetch should have been called')
+      assert.ok(suFetchCalled, 'SU fetch should have been called')
+      assert.deepStrictEqual(res, {
+        res: { message: 'foobar' },
+        messageId: 'data-item-123',
+        assignmentSlot: '42'
+      })
+    })
   })
 
   describe('deployProcessWith', () => {

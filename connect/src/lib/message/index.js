@@ -26,10 +26,10 @@ import { prepareMessageWith, sendSignedMessageWith, uploadMessageWith } from './
 export function messageWith (env) {
   const uploadMessage = uploadMessageWith(env)
 
-  return ({ process, data, tags, anchor, signer }) => {
-    return of({ id: process, data, tags, anchor, signer })
+  return ({ process, data, tags, anchor, signer, returnAssignmentSlot }) => {
+    return of({ id: process, data, tags, anchor, signer, returnAssignmentSlot })
       .chain(uploadMessage)
-      .map((ctx) => ctx.messageId)
+      .map((ctx) => returnAssignmentSlot ? ctx.assignmentSlot.toString() : ctx.messageId)
       .bimap(errFrom, identity)
       .toPromise()
   }
