@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.0.94](https://github.com/permaweb/ao/compare/connect@v0.0.93...connect@v0.0.94) (2026-04-07)
+
+
+### Features
+
+* add optional arg to message to return assignment slot ([cbff693](https://github.com/permaweb/ao/commit/cbff69380a32331fad5ec1e2a792448aae701db3))
+
+
+### Bug Fixes
+
+* **connect:** polyfill process in browser script ([1f2bebb](https://github.com/permaweb/ao/commit/1f2bebbd2774a65a734780789d3b29b06fdf4389))
+
 ## [0.0.94](https://github.com/permaweb/ao/compare/connect@v0.0.93...connect@v0.0.94) (2025-12-15)
 
 
