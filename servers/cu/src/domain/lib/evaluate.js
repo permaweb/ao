@@ -344,12 +344,15 @@ export function evaluateWith (env) {
           const now = new Date()
           // If there is no startTime, then we use the current time which will make evalTime = 0
           const startTime = pathOr(now, ['stats', 'startTime'], ctx)
-
+          const assignmentIdToSave =
+            (message.Skip === 'true' && message['Original-Assignment-Id'])
+              ? message['Original-Assignment-Id']
+              : mostRecentAssignmentId
           await saveLatestProcessMemory({
             processId: ctx.id,
             moduleId: ctx.moduleId,
             messageId: message.Id,
-            assignmentId: mostRecentAssignmentId,
+            assignmentId: assignmentIdToSave,
             hashChain: mostRecentHashChain,
             timestamp: message.Timestamp,
             nonce: message.Nonce,

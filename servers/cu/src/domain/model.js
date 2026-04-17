@@ -371,6 +371,7 @@ export const messageSchema = z.object({
      */
     Cron: z.boolean(),
     Skip: z.string().default('false'),
+    'Original-Assignment-Id': z.string().nullish(),
     'Read-Only': z.boolean().default(false)
   }),
   AoGlobal: z.object({
