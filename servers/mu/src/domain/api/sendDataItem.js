@@ -326,7 +326,7 @@ export function sendDataItemWith ({
           .chain(({ isMessage, proc }) => {
             if (isMessage) {
               const variant = proc.tags.find(tag => tag.name === 'Variant')?.value
-              const whitelist = fetchProcessWhitelist ? fetchProcessWhitelist() : {}
+              const whitelist = fetchProcessWhitelist ? fetchProcessWhitelist() : null
               if (variant !== 'ao.N.1' && whitelist && !whitelist[ctx.dataItem.target]) {
                 const error = new Error('Forbidden, process not whitelisted')
                 error.status = 403

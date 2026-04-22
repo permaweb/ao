@@ -194,7 +194,7 @@ export const createApis = async (ctx) => {
     processesFile = { PROCESSES: json.processes || {} }
   }, { runOnInit: true })
 
-  const fetchProcessWhitelist = () => processesFile.PROCESSES || {}
+  const fetchProcessWhitelist = () => processesFile.PROCESSES || null
 
   // Create trace database metrics
   MetricsClient.gaugeWith({})({
