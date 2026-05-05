@@ -17,7 +17,12 @@ const BATCH_SIZE: i64 = 500;
   gets its own tokio task but we limit how many run at once
   to avoid overwhelming postgres connection pools and memory.
 */
-const CONCURRENT_PROCESSES: usize = 60;
+fn concurrent_processes() -> usize {
+    std::env::var("MIGRATE_CONCURRENCY")
+        .ok()
+        .and_then(|v| v.parse().ok())
+        .unwrap_or(60)
+}
 
 /*
   Outcome of verifying the latest message in the local store
@@ -100,15 +105,17 @@ pub async fn migrate_whitelist() -> Result<(), String> {
 
     let all_process_ids = store.process_id_list();
 
+    let concurrency = concurrent_processes();
+
     logger.log(format!(
         "Total whitelisted processes to migrate: {}. Concurrency: {}",
         all_process_ids.len(),
-        CONCURRENT_PROCESSES
+        concurrency
     ));
 
     let total_processes = Arc::new(AtomicU64::new(0));
     let total_messages = Arc::new(AtomicU64::new(0));
-    let semaphore = Arc::new(Semaphore::new(CONCURRENT_PROCESSES));
+    let semaphore = Arc::new(Semaphore::new(concurrency));
 
     let mut handles = Vec::with_capacity(all_process_ids.len());
 
