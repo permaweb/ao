@@ -465,30 +465,56 @@ impl DataStore for LocalStoreClient {
       Index and save a process, currently we dont
       use the process index for anything but building
       it here to remain consistent with how messages
-      are saved
+      are saved.
+
+      Processes created before Sept 2024 do not have an
+      assignment. For these we use the process_id itself
+      as the key in both the index and file_db, and skip
+      the ordering index (no epoch/nonce/timestamp available).
     */
     fn save_process(&self, process: &Process, bundle: &[u8]) -> Result<String, StoreErrorType> {
         let process_id = &process.process.process_id;
-        let assignment_id = process.assignment_id()?;
 
         let cf = self.index_db.cf_handle("process").ok_or_else(|| {
             StoreErrorType::DatabaseError("Column family 'process' not found".to_string())
         })?;
 
-        let process_key = self.proc_composite_key(process_id, &assignment_id);
-        self.index_db
-            .put_cf(cf, process_key.as_bytes(), assignment_id.as_bytes())?;
+        match process.assignment_id() {
+            Ok(assignment_id) => {
+                /*
+                  Process has an assignment - use the full indexing scheme
+                */
+                let process_key = self.proc_composite_key(process_id, &assignment_id);
+                self.index_db
+                    .put_cf(cf, process_key.as_bytes(), assignment_id.as_bytes())?;
 
-        let cf = self.index_db.cf_handle("process_ordering").ok_or_else(|| {
-            StoreErrorType::DatabaseError("Column family 'process_ordering' not found".to_string())
-        })?;
+                let cf_ordering = self.index_db.cf_handle("process_ordering").ok_or_else(|| {
+                    StoreErrorType::DatabaseError(
+                        "Column family 'process_ordering' not found".to_string(),
+                    )
+                })?;
 
-        let process_order_key = self.proc_order_key(process)?;
-        self.index_db
-            .put_cf(cf, process_order_key.as_bytes(), assignment_id.as_bytes())?;
+                let process_order_key = self.proc_order_key(process)?;
+                self.index_db
+                    .put_cf(cf_ordering, process_order_key.as_bytes(), assignment_id.as_bytes())?;
 
-        let assignment_key = self.proc_assignment_key(&assignment_id);
-        self.file_db.put(assignment_key.as_bytes(), bundle)?;
+                let assignment_key = self.proc_assignment_key(&assignment_id);
+                self.file_db.put(assignment_key.as_bytes(), bundle)?;
+            }
+            Err(_) => {
+                /*
+                  Legacy process without an assignment. Use process_id
+                  as the key everywhere so get_process can still find it
+                  via the prefix scan on "process:{process_id}:".
+                */
+                let process_key = self.proc_composite_key(process_id, process_id);
+                self.index_db
+                    .put_cf(cf, process_key.as_bytes(), process_id.as_bytes())?;
+
+                let assignment_key = self.proc_assignment_key(process_id);
+                self.file_db.put(assignment_key.as_bytes(), bundle)?;
+            }
+        }
 
         Ok("Process saved".to_string())
     }

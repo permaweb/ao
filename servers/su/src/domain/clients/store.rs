@@ -162,6 +162,62 @@ impl StoreClient {
         })
     }
 
+    /*
+      Opens read-only connections to all the multi-tenant databases
+      and read-only bytestores (EFS). This allows running migrations
+      or other read operations while the server is still running.
+    */
+    pub fn multi_tenant_read_db(process_whitelist: Arc<dyn ProcessWhitelist>, config: AoConfig) -> Result<Self, StoreErrorType> {
+        let c_clone = config.clone();
+        let logger = SuLog::init();
+
+        let base_read_conn = config.multi_tenant_base_read_conn.trim_end_matches('/').to_string();
+
+        let mut tenant_read_pools: HashMap<String, Pool<ConnectionManager<PgConnection>>> = HashMap::new();
+
+        for db_name in process_whitelist.su_db_names() {
+            let read_url = format!("{}/{}", base_read_conn, db_name);
+            let tenant_read_manager = ConnectionManager::<PgConnection>::new(read_url);
+            let tenant_read_pool = Pool::builder()
+                .max_size(config.db_read_connections)
+                .test_on_check_out(true)
+                .build(tenant_read_manager)
+                .map_err(|_| {
+                    StoreErrorType::DatabaseError(format!(
+                        "Failed to initialize read connection pool for tenant db '{}'.",
+                        db_name
+                    ))
+                })?;
+            tenant_read_pools.insert(db_name, tenant_read_pool);
+        }
+
+        let mut tenant_bytestores: HashMap<String, Arc<bytestore::ByteStore>> = HashMap::new();
+        for (efs_name, db_name) in process_whitelist.su_efs_names() {
+            let mut tenant_config = config.clone();
+            if config.multi_tenant_base_data_dir.is_empty() {
+                panic!("MULTI_TENANT_BASE_DATA_DIR must be set in multi-tenant mode (needed for bytestore path of '{}')", efs_name);
+            }
+            tenant_config.su_data_dir = format!("{}/{}", config.multi_tenant_base_data_dir, efs_name);
+            tenant_bytestores.insert(db_name, Arc::new(bytestore::ByteStore::new_read_only(tenant_config)));
+        }
+
+        let process_db_map = process_whitelist.process_db_names();
+
+        Ok(StoreClient {
+            pool: None,
+            read_pool: None,
+            tenant_pools: HashMap::new(),
+            tenant_read_pools,
+            tenant_bytestores,
+            process_db_map,
+            logger,
+            bytestore: Arc::new(bytestore::ByteStore::new(c_clone)),
+            in_memory_cache: InMemoryCache::new(config.process_cache_size),
+            enable_process_assignment: config.enable_process_assignment,
+            use_disk: config.use_disk,
+        })
+    }
+
     fn multi_tenant_db(process_whitelist: Arc<dyn ProcessWhitelist>, config: AoConfig) -> Result<Self, StoreErrorType> {
         let c_clone = config.clone();
         let logger = SuLog::init();
@@ -346,7 +402,7 @@ impl StoreClient {
       Falls back to self.bytestore in single-tenant mode.
     */
     fn get_bytestore(&self, process_id: &String) -> Arc<bytestore::ByteStore> {
-        if !self.tenant_pools.is_empty() {
+        if !self.tenant_bytestores.is_empty() {
             if let Some(db_name) = self.process_db_map.get(process_id.as_str()) {
                 if let Some(bs) = self.tenant_bytestores.get(db_name) {
                     return bs.clone();
@@ -703,6 +759,133 @@ impl StoreClient {
 
         Ok(())
     }
+
+    /*
+      Migration helpers - these are used by the whitelist migration
+      program to read data out of the multi-tenant postgres + bytestore
+      setup without touching the heavy bundle/json columns in postgres.
+    */
+
+    /*
+      Returns the process_id -> db_name mapping from the whitelist.
+    */
+    pub fn process_id_list(&self) -> Vec<String> {
+        self.process_db_map.keys().cloned().collect()
+    }
+
+    /*
+      Paginate message metadata for a process. Returns only the lightweight
+      columns (no bundle, no message_data). Ordered by timestamp ascending.
+      Returns up to `limit` rows starting after `after_timestamp`.
+    */
+    pub fn list_message_metadata(
+        &self,
+        process_id_in: &str,
+        after_timestamp: Option<i64>,
+        limit: i64,
+    ) -> Result<Vec<DbMessageWithoutData>, StoreErrorType> {
+        use super::schema::messages::dsl::*;
+        let conn = &mut self.get_read_conn(&process_id_in.to_string())?;
+
+        let mut query = messages
+            .filter(process_id.eq(process_id_in))
+            .select((row_id, process_id, message_id, assignment_id, epoch, nonce, timestamp, hash_chain))
+            .into_boxed();
+
+        if let Some(after_ts) = after_timestamp {
+            query = query.filter(timestamp.gt(after_ts));
+        }
+
+        let rows: Vec<DbMessageWithoutData> = query
+            .order(timestamp.asc())
+            .limit(limit)
+            .load(conn)?;
+
+        Ok(rows)
+    }
+
+    /*
+      Read a single message binary from the bytestore for
+      the given process. This avoids reading the bundle column
+      from postgres which is far too slow for large datasets.
+    */
+    pub fn read_message_binary(
+        &self,
+        process_id_in: &str,
+        message_id_in: &str,
+        assignment_id_in: &Option<String>,
+        timestamp_in: &str,
+    ) -> Result<Option<Vec<u8>>, StoreErrorType> {
+        let bytestore = self.get_bytestore(&process_id_in.to_string());
+        if !bytestore.is_ready() {
+            return Err(StoreErrorType::DatabaseError(
+                "Bytestore is not ready".to_string(),
+            ));
+        }
+        bytestore
+            .read_binary(message_id_in, assignment_id_in, process_id_in, timestamp_in)
+            .map_err(|e| StoreErrorType::DatabaseError(e))
+    }
+
+    /*
+      Fallback for reading a message bundle directly from postgres.
+      This is slow but necessary for messages that were never written
+      to the bytestore.
+    */
+    pub fn get_message_bundle_from_db(
+        &self,
+        process_id_in: &str,
+        message_id_in: &str,
+        assignment_id_in: &Option<String>,
+    ) -> Result<Vec<u8>, StoreErrorType> {
+        use super::schema::messages::dsl::*;
+        let conn = &mut self.get_read_conn(&process_id_in.to_string())?;
+
+        let db_message_result: Result<Option<DbMessage>, DieselError> = match assignment_id_in {
+            Some(assignment_id_d) => messages
+                .filter(
+                    message_id
+                        .eq(message_id_in)
+                        .and(assignment_id.eq(assignment_id_d)),
+                )
+                .order(timestamp.asc())
+                .first(conn)
+                .optional(),
+            None => messages
+                .filter(message_id.eq(message_id_in))
+                .order(timestamp.asc())
+                .first(conn)
+                .optional(),
+        };
+
+        match db_message_result {
+            Ok(Some(db_message)) => Ok(db_message.bundle),
+            Ok(None) => Err(StoreErrorType::NotFound("Message not found".to_string())),
+            Err(e) => Err(StoreErrorType::from(e)),
+        }
+    }
+
+    /*
+      Connect the bytestores for all tenants. Must be called
+      before reading message binaries in migration mode.
+    */
+    pub fn connect_bytestores(&self) {
+        for (db_name, bytestore) in &self.tenant_bytestores {
+            match bytestore.try_connect() {
+                Ok(_) => {
+                    self.logger.log(format!(
+                        "Bytestore connected for tenant '{}'", db_name
+                    ));
+                }
+                Err(e) => {
+                    self.logger.error(format!(
+                        "Failed to connect bytestore for tenant '{}': {}", db_name, e
+                    ));
+                }
+            }
+        }
+    }
+
 }
 
 /*
@@ -1748,6 +1931,7 @@ mod bytestore {
     pub struct ByteStore {
         db: RwLock<Option<DB>>,
         config: AoConfig,
+        read_only: bool,
     }
 
     impl ByteStore {
@@ -1755,10 +1939,22 @@ mod bytestore {
             ByteStore {
                 db: RwLock::new(None),
                 config,
+                read_only: false,
+            }
+        }
+
+        pub fn new_read_only(config: AoConfig) -> Self {
+            ByteStore {
+                db: RwLock::new(None),
+                config,
+                read_only: true,
             }
         }
 
         pub fn try_connect(&self) -> Result<(), String> {
+            if self.read_only {
+                return self.try_connect_read_only();
+            }
             let mut opts = Options::default();
             opts.create_if_missing(true);
             opts.set_enable_blob_files(true); // Enable blob files
@@ -1767,6 +1963,22 @@ mod bytestore {
 
             let new_db = DB::open(&opts, &self.config.su_data_dir)
                 .map_err(|e| format!("Failed to open RocksDB: {:?}", e))?;
+
+            let mut db_write = self.db.write().unwrap();
+            *db_write = Some(new_db);
+
+            Ok(())
+        }
+
+        fn try_connect_read_only(&self) -> Result<(), String> {
+            let mut opts = Options::default();
+            opts.create_if_missing(false);
+            opts.set_enable_blob_files(true);
+            opts.set_blob_file_size(5 * 1024 * 1024 * 1024);
+            opts.set_min_blob_size(1024);
+
+            let new_db = DB::open_for_read_only(&opts, &self.config.su_data_dir, false)
+                .map_err(|e| format!("Failed to open RocksDB read-only: {:?}", e))?;
 
             let mut db_write = self.db.write().unwrap();
             *db_write = Some(new_db);
@@ -1815,6 +2027,26 @@ mod bytestore {
                     }
                 }
                 Ok(Arc::try_unwrap(binaries).map_err(|_| "Failed to unwrap Arc")?)
+            } else {
+                Err("Database is not initialized".into())
+            }
+        }
+
+        pub fn read_binary(
+            &self,
+            message_id: &str,
+            assignment_id: &Option<String>,
+            process_id: &str,
+            timestamp: &str,
+        ) -> Result<Option<Vec<u8>>, String> {
+            let key = ByteStore::create_key(message_id, assignment_id, process_id, timestamp);
+            let db = match self.db.read() {
+                Ok(r) => r,
+                Err(_) => return Err("Failed to acquire read lock".into()),
+            };
+
+            if let Some(ref db) = *db {
+                db.get(&key).map_err(|e| format!("Failed to read from RocksDB: {:?}", e))
             } else {
                 Err("Database is not initialized".into())
             }

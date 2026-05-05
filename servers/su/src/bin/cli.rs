@@ -1,6 +1,7 @@
 use std::env;
 use std::io;
 use su::domain::reupload_bundles;
+use su::domain::migrate_whitelist;
 
 #[tokio::main]
 async fn main() -> io::Result<()> {
@@ -8,42 +9,43 @@ async fn main() -> io::Result<()> {
 
     if args.len() < 2 {
         eprintln!("Usage: {} <function_name>", args[0]);
-        eprintln!("Available functions: reupload_bundles");
+        eprintln!("Available functions: reupload_bundles, migrate_whitelist");
         return Ok(());
     }
 
-    let pids = if args.len() > 3 && args[1] == "reupload_bundles" {
-        args[2].clone()
-    } else {
-        eprintln!("Must provid pids, and since value");
-        return Ok(());
-    };
-
-    let since = if args.len() > 3 && args[1] == "reupload_bundles" {
-        args[3].clone()
-    } else {
-        eprintln!("Must provid since");
-        return Ok(());
-    };
-
-    let delay = if args.len() > 4 && args[1] == "reupload_bundles" {
-        match args[4].parse::<u64>() {
-            Ok(val) => val,
-            Err(_) => {
-                10
-            }
-        }
-    } else {
-        10
-    };
-
     match args[1].as_str() {
+        "migrate_whitelist" => {
+            migrate_whitelist().await.unwrap();
+        }
         "reupload_bundles" => {
+            let pids = if args.len() > 3 {
+                args[2].clone()
+            } else {
+                eprintln!("Must provide pids, and since value");
+                return Ok(());
+            };
+
+            let since = if args.len() > 3 {
+                args[3].clone()
+            } else {
+                eprintln!("Must provide since");
+                return Ok(());
+            };
+
+            let delay = if args.len() > 4 {
+                match args[4].parse::<u64>() {
+                    Ok(val) => val,
+                    Err(_) => 10,
+                }
+            } else {
+                10
+            };
+
             reupload_bundles(pids, since, delay).await.unwrap();
         }
         _ => {
             eprintln!("Invalid function name: {}", args[1]);
-            eprintln!("Available functions: reupload_bundles");
+            eprintln!("Available functions: reupload_bundles, migrate_whitelist");
         }
     }
 
