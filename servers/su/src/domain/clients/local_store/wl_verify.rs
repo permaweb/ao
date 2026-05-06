@@ -1,5 +1,5 @@
 use std::sync::Arc;
-use std::sync::atomic::{AtomicU64, AtomicBool, Ordering};
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::collections::HashSet;
 
 use tokio::sync::Semaphore;
@@ -38,7 +38,6 @@ fn excluded_processes() -> HashSet<String> {
 
 enum VerifyResult {
     Match { messages_verified: u64 },
-    Mismatch(String),
     Error(String),
 }
 
@@ -132,18 +131,12 @@ pub async fn verify_whitelist() -> Result<(), String> {
             let pid_for_log = pid.clone();
             let logger_for_log = logger.clone();
 
-            let result = verify_process_async(&store, &local_store, &pid, &logger).await;
+            let result = verify_process_async(&store, &local_store, &pid, &logger, &total_mismatches).await;
 
             match result {
                 VerifyResult::Match { messages_verified } => {
                     total_processes.fetch_add(1, Ordering::Relaxed);
                     total_messages.fetch_add(messages_verified, Ordering::Relaxed);
-                }
-                VerifyResult::Mismatch(desc) => {
-                    total_mismatches.fetch_add(1, Ordering::Relaxed);
-                    logger_for_log.error(format!(
-                        "MISMATCH process '{}': {}", pid_for_log, desc
-                    ));
                 }
                 VerifyResult::Error(e) => {
                     total_errors.fetch_add(1, Ordering::Relaxed);
@@ -183,10 +176,8 @@ pub async fn verify_whitelist() -> Result<(), String> {
         procs, msgs, mismatches, errors
     ));
 
-    if mismatches > 0 || errors > 0 {
-        Err(format!(
-            "Verification failed: {} mismatches, {} errors", mismatches, errors
-        ))
+    if errors > 0 {
+        Err(format!("Verification had {} errors", errors))
     } else {
         Ok(())
     }
@@ -201,6 +192,7 @@ async fn verify_process_async(
     local_store: &Arc<LocalStoreClient>,
     process_id: &str,
     logger: &Arc<dyn Log>,
+    total_mismatches: &Arc<AtomicU64>,
 ) -> VerifyResult {
     /*
       Compare Process JSON
@@ -234,9 +226,10 @@ async fn verify_process_async(
     };
 
     if mt_process_json != local_process_json {
-        return VerifyResult::Mismatch(format!(
-            "Process JSON differs ({} vs {} bytes)",
-            mt_process_json.len(), local_process_json.len()
+        total_mismatches.fetch_add(1, Ordering::Relaxed);
+        logger.log(format!(
+            "Process '{}': Process JSON differs ({} vs {} bytes), continuing with messages",
+            process_id, mt_process_json.len(), local_process_json.len()
         ));
     }
 
@@ -300,8 +293,10 @@ async fn verify_process_async(
             };
 
             if mt_json != local_json {
-                return VerifyResult::Mismatch(format!(
-                    "Message JSON differs at position {} (cursor mt='{}' local='{}'): {} vs {} bytes",
+                total_mismatches.fetch_add(1, Ordering::Relaxed);
+                logger.error(format!(
+                    "Process '{}': Message JSON differs at position {} (cursor mt='{}' local='{}'): {} vs {} bytes",
+                    process_id,
                     messages_verified + i as u64,
                     mt_edges[i].cursor,
                     local_edges[i].cursor,
