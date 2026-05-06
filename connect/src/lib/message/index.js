@@ -15,10 +15,12 @@ import { prepareMessageWith, sendSignedMessageWith, uploadMessageWith } from './
  * @property {{ name: string, value: string }[]} [tags]
  * @property {string} [anchor]
  * @property {Types['signer']} [signer]
+ * @property {boolean} [returnAssignmentSlot]
+ * @property {boolean} [returnMessageId]
  *
  * @callback SendMessage
  * @param {SendMessageArgs} args
- * @returns {Promise<string>} the id of the data item that represents this message
+ * @returns {Promise<string | { slot: string, id: string }>} the id of the data item that represents this message, the assignment slot, or both
  *
  * @param {Env1} - the environment
  * @returns {SendMessage}
@@ -26,10 +28,20 @@ import { prepareMessageWith, sendSignedMessageWith, uploadMessageWith } from './
 export function messageWith (env) {
   const uploadMessage = uploadMessageWith(env)
 
-  return ({ process, data, tags, anchor, signer, returnAssignmentSlot }) => {
-    return of({ id: process, data, tags, anchor, signer, returnAssignmentSlot })
+  return ({ process, data, tags, anchor, signer, returnAssignmentSlot, returnMessageId }) => {
+    return of({ id: process, data, tags, anchor, signer, returnAssignmentSlot, returnMessageId })
       .chain(uploadMessage)
-      .map((ctx) => returnAssignmentSlot ? ctx.assignmentSlot.toString() : ctx.messageId)
+      .map((ctx) => {
+        const id = ctx.messageId
+
+        if (returnAssignmentSlot) {
+          const slot = ctx.assignmentSlot.toString()
+          if (returnMessageId) return { slot, id }
+          return slot
+        }
+
+        return id
+      })
       .bimap(errFrom, identity)
       .toPromise()
   }
