@@ -44,6 +44,26 @@ const getTags = (args) =>
 
 const getData = (args) => args.data ?? '1984'
 
+const getMessageId = (response, parsedResponse) =>
+  parsedResponse.id ??
+  parsedResponse.messageId ??
+  parsedResponse.message?.id ??
+  response.headers?.get?.('id') ??
+  response.headers?.get?.('message')
+
+const getMessageResponse = ({ response, parsedResponse, returnAssignmentSlot, returnMessageId }) => {
+  const slot = parsedResponse.slot
+
+  if (returnMessageId) {
+    const id = getMessageId(response, parsedResponse)
+    if (!id) throw new Error('Message id not found in response')
+    if (returnAssignmentSlot) return { slot, id }
+    return id
+  }
+
+  return slot
+}
+
 export function requestWith(deps) {
   return async (args) => {
     try {
@@ -126,7 +146,14 @@ export function messageWith(deps) {
         const parsedResponse = await response.json()
 
         if (args.opts?.fullResponse) return normalizeOutput(parsedResponse)
-        else return parsedResponse.slot
+        else {
+          return getMessageResponse({
+            response,
+            parsedResponse,
+            returnAssignmentSlot: args.returnAssignmentSlot,
+            returnMessageId: args.returnMessageId
+          })
+        }
       }
       else throw new Error('Error sending message')
     } catch (e) {

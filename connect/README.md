@@ -123,6 +123,8 @@ const messageId = await message({
 
 > Optional: Pass `returnAssignmentSlot: true` to `message` to get the scheduled slot of this message
 
+> Optional: Pass `returnMessageId: true` with `returnAssignmentSlot: true` to return both values as `{ slot, id }`
+
 > You can pass a 32 byte `anchor` to `message` which will be set on the DataItem
 
 #### `signMessage`
