@@ -106,7 +106,6 @@ pub async fn verify_whitelist() -> Result<(), String> {
 
     let total_processes = Arc::new(AtomicU64::new(0));
     let total_messages = Arc::new(AtomicU64::new(0));
-    let total_mismatches = Arc::new(AtomicU64::new(0));
     let total_errors = Arc::new(AtomicU64::new(0));
     let completed = Arc::new(AtomicU64::new(0));
     let total_count = all_process_ids.len() as u64;
@@ -121,7 +120,6 @@ pub async fn verify_whitelist() -> Result<(), String> {
         let semaphore = semaphore.clone();
         let total_processes = total_processes.clone();
         let total_messages = total_messages.clone();
-        let total_mismatches = total_mismatches.clone();
         let total_errors = total_errors.clone();
         let completed = completed.clone();
 
@@ -131,7 +129,7 @@ pub async fn verify_whitelist() -> Result<(), String> {
             let pid_for_log = pid.clone();
             let logger_for_log = logger.clone();
 
-            let result = verify_process_async(&store, &local_store, &pid, &logger, &total_mismatches).await;
+            let result = verify_process_async(&store, &local_store, &pid, &logger).await;
 
             match result {
                 VerifyResult::Match { messages_verified } => {
@@ -149,11 +147,10 @@ pub async fn verify_whitelist() -> Result<(), String> {
             let done = completed.fetch_add(1, Ordering::Relaxed) + 1;
             if done % 100 == 0 || done == total_count {
                 logger_for_log.log(format!(
-                    "Progress: {}/{} processes done | {} messages verified | {} mismatches | {} errors",
+                    "Progress: {}/{} processes done | {} messages verified | {} errors",
                     done,
                     total_count,
                     total_messages.load(Ordering::Relaxed),
-                    total_mismatches.load(Ordering::Relaxed),
                     total_errors.load(Ordering::Relaxed),
                 ));
             }
@@ -168,12 +165,11 @@ pub async fn verify_whitelist() -> Result<(), String> {
 
     let procs = total_processes.load(Ordering::Relaxed);
     let msgs = total_messages.load(Ordering::Relaxed);
-    let mismatches = total_mismatches.load(Ordering::Relaxed);
     let errors = total_errors.load(Ordering::Relaxed);
 
     logger.log(format!(
-        "Verification complete. {} processes, {} messages verified. {} mismatches, {} errors.",
-        procs, msgs, mismatches, errors
+        "Verification complete. {} processes, {} messages verified. {} errors.",
+        procs, msgs, errors
     ));
 
     if errors > 0 {
@@ -192,7 +188,6 @@ async fn verify_process_async(
     local_store: &Arc<LocalStoreClient>,
     process_id: &str,
     logger: &Arc<dyn Log>,
-    total_mismatches: &Arc<AtomicU64>,
 ) -> VerifyResult {
     /*
       Compare Process JSON
@@ -226,7 +221,6 @@ async fn verify_process_async(
     };
 
     if mt_process_json != local_process_json {
-        total_mismatches.fetch_add(1, Ordering::Relaxed);
         logger.log(format!(
             "Process '{}': Process JSON differs ({} vs {} bytes), continuing with messages",
             process_id, mt_process_json.len(), local_process_json.len()
@@ -293,7 +287,6 @@ async fn verify_process_async(
             };
 
             if mt_json != local_json {
-                total_mismatches.fetch_add(1, Ordering::Relaxed);
                 logger.error(format!(
                     "Process '{}': Message JSON differs at position {} (cursor mt='{}' local='{}'): {} vs {} bytes",
                     process_id,
