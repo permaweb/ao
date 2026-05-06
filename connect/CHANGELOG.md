@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.0.95](https://github.com/permaweb/ao/compare/connect@v0.0.94...connect@v0.0.95) (2026-05-06)
+
+
+### Features
+
+* add optional message id flag to support return type { slot, id } ([8ea61de](https://github.com/permaweb/ao/commit/8ea61deff4749792fe477d85030a9bb39ced0f92))
+
 ## [0.0.94](https://github.com/permaweb/ao/compare/connect@v0.0.93...connect@v0.0.94) (2026-04-07)
 
 
