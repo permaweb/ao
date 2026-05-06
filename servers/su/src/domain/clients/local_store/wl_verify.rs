@@ -1,5 +1,5 @@
 use std::sync::Arc;
-use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::atomic::{AtomicU64, AtomicBool, Ordering};
 use std::collections::HashSet;
 
 use tokio::sync::Semaphore;
@@ -11,12 +11,10 @@ use super::super::store::StoreClient;
 use super::super::whitelist::FileUrlWhitelist;
 use super::store::LocalStoreClient;
 
-const BATCH_SIZE: i64 = 500;
+const PAGE_SIZE: i32 = 100;
 
 /*
-  Number of processes to verify concurrently. Each process
-  gets its own tokio task but we limit how many run at once
-  to avoid overwhelming postgres connection pools and memory.
+  Number of processes to verify concurrently.
 */
 fn concurrent_processes() -> usize {
     std::env::var("VERIFY_CONCURRENCY")
@@ -38,35 +36,20 @@ fn excluded_processes() -> HashSet<String> {
         .collect()
 }
 
-/*
-  Outcome of verifying a single process's data across
-  both stores.
-*/
 enum VerifyResult {
-    /*
-      All data matched byte-for-byte between the multi-tenant
-      store and the local store.
-    */
     Match { messages_verified: u64 },
-    /*
-      A mismatch was found. The string describes what differed.
-    */
     Mismatch(String),
-    /*
-      An error occurred during verification (db failure, etc).
-    */
     Error(String),
 }
 
 /*
-  Verify all whitelisted processes by comparing data retrieved
-  from the multi-tenant postgres + bytestore against the local
-  RocksDB store. Every process bundle and every message bundle
-  must be byte-for-byte identical.
+  Verify all whitelisted processes by comparing the JSON-serialized
+  Process and Message objects returned by get_process and get_messages
+  on both the multi-tenant store and the local store.
 
-  The only acceptable discrepancy is if the multi-tenant store
-  has extra messages at the tail that are not yet in the local
-  store (since the live database is still receiving writes).
+  Every Process and every Message is serialized to JSON and compared
+  byte-for-byte. The only acceptable discrepancy is trailing messages
+  in the multi-tenant store not yet in the local store.
 
   Use VERIFY_EXCLUDE_PROCESSES env var (comma-separated) to skip
   specific processes.
@@ -126,6 +109,8 @@ pub async fn verify_whitelist() -> Result<(), String> {
     let total_messages = Arc::new(AtomicU64::new(0));
     let total_mismatches = Arc::new(AtomicU64::new(0));
     let total_errors = Arc::new(AtomicU64::new(0));
+    let completed = Arc::new(AtomicU64::new(0));
+    let total_count = all_process_ids.len() as u64;
     let semaphore = Arc::new(Semaphore::new(concurrency));
 
     let mut handles = Vec::with_capacity(all_process_ids.len());
@@ -139,44 +124,45 @@ pub async fn verify_whitelist() -> Result<(), String> {
         let total_messages = total_messages.clone();
         let total_mismatches = total_mismatches.clone();
         let total_errors = total_errors.clone();
+        let completed = completed.clone();
 
         let handle = tokio::spawn(async move {
             let _permit = semaphore.acquire().await.unwrap();
 
-            let pid_for_panic = pid.clone();
-            let logger_for_panic = logger.clone();
+            let pid_for_log = pid.clone();
+            let logger_for_log = logger.clone();
 
-            let result = tokio::task::spawn_blocking(move || {
-                verify_process(&store, &local_store, &pid, &logger)
-            }).await;
+            let result = verify_process_async(&store, &local_store, &pid, &logger).await;
 
             match result {
-                Ok(VerifyResult::Match { messages_verified }) => {
+                VerifyResult::Match { messages_verified } => {
                     total_processes.fetch_add(1, Ordering::Relaxed);
                     total_messages.fetch_add(messages_verified, Ordering::Relaxed);
-                    logger_for_panic.log(format!(
-                        "VERIFIED process '{}': {} messages match",
-                        pid_for_panic, messages_verified
-                    ));
                 }
-                Ok(VerifyResult::Mismatch(desc)) => {
+                VerifyResult::Mismatch(desc) => {
                     total_mismatches.fetch_add(1, Ordering::Relaxed);
-                    logger_for_panic.error(format!(
-                        "MISMATCH process '{}': {}", pid_for_panic, desc
+                    logger_for_log.error(format!(
+                        "MISMATCH process '{}': {}", pid_for_log, desc
                     ));
                 }
-                Ok(VerifyResult::Error(e)) => {
+                VerifyResult::Error(e) => {
                     total_errors.fetch_add(1, Ordering::Relaxed);
-                    logger_for_panic.error(format!(
-                        "ERROR verifying process '{}': {}", pid_for_panic, e
+                    logger_for_log.error(format!(
+                        "ERROR verifying process '{}': {}", pid_for_log, e
                     ));
                 }
-                Err(e) => {
-                    total_errors.fetch_add(1, Ordering::Relaxed);
-                    logger_for_panic.error(format!(
-                        "PANIC verifying process '{}': {:?}", pid_for_panic, e
-                    ));
-                }
+            }
+
+            let done = completed.fetch_add(1, Ordering::Relaxed) + 1;
+            if done % 100 == 0 || done == total_count {
+                logger_for_log.log(format!(
+                    "Progress: {}/{} processes done | {} messages verified | {} mismatches | {} errors",
+                    done,
+                    total_count,
+                    total_messages.load(Ordering::Relaxed),
+                    total_mismatches.load(Ordering::Relaxed),
+                    total_errors.load(Ordering::Relaxed),
+                ));
             }
         });
 
@@ -193,7 +179,7 @@ pub async fn verify_whitelist() -> Result<(), String> {
     let errors = total_errors.load(Ordering::Relaxed);
 
     logger.log(format!(
-        "Verification complete. {} processes verified, {} messages verified, {} mismatches, {} errors.",
+        "Verification complete. {} processes, {} messages verified. {} mismatches, {} errors.",
         procs, msgs, mismatches, errors
     ));
 
@@ -207,156 +193,144 @@ pub async fn verify_whitelist() -> Result<(), String> {
 }
 
 /*
-  Verify a single process by comparing:
-  1. The process bundle (byte-for-byte)
-  2. Every message bundle, paging through from start to finish
-
-  The only acceptable discrepancy is trailing messages in the
-  multi-tenant store that don't yet exist in the local store.
+  Verify a single process by JSON-encoding Process and Message
+  objects from both stores and comparing the bytes.
 */
-fn verify_process(
-    store: &StoreClient,
-    local_store: &LocalStoreClient,
+async fn verify_process_async(
+    store: &Arc<StoreClient>,
+    local_store: &Arc<LocalStoreClient>,
     process_id: &str,
     logger: &Arc<dyn Log>,
 ) -> VerifyResult {
     /*
-      Step 1: Verify the process bundle
+      Compare Process JSON
     */
-    let mt_bundle = match store.get_process_bundle(process_id) {
-        Ok(b) => b,
+    let mt_process = match store.get_process(process_id).await {
+        Ok(p) => p,
         Err(e) => return VerifyResult::Error(format!(
-            "Failed to get process bundle from multi-tenant: {:?}", e
+            "Failed to get_process from multi-tenant: {:?}", e
         )),
     };
 
-    let local_bundle = match local_store.get_process_bundle_public(process_id) {
-        Ok(b) => b,
+    let local_process = match local_store.get_process(process_id).await {
+        Ok(p) => p,
         Err(e) => return VerifyResult::Error(format!(
-            "Failed to get process bundle from local store: {:?}", e
+            "Failed to get_process from local store: {:?}", e
         )),
     };
 
-    if mt_bundle != local_bundle {
+    let mt_process_json = match serde_json::to_vec(&mt_process) {
+        Ok(j) => j,
+        Err(e) => return VerifyResult::Error(format!(
+            "Failed to serialize mt process: {}", e
+        )),
+    };
+
+    let local_process_json = match serde_json::to_vec(&local_process) {
+        Ok(j) => j,
+        Err(e) => return VerifyResult::Error(format!(
+            "Failed to serialize local process: {}", e
+        )),
+    };
+
+    if mt_process_json != local_process_json {
         return VerifyResult::Mismatch(format!(
-            "Process bundle differs: multi-tenant {} bytes vs local {} bytes",
-            mt_bundle.len(), local_bundle.len()
+            "Process JSON differs ({} vs {} bytes)",
+            mt_process_json.len(), local_process_json.len()
         ));
     }
 
     /*
-      Step 2: Verify all messages by paging through the multi-tenant
-      store and comparing each bundle against the local store.
+      Page through messages comparing JSON of each edge
     */
-    let mut after_timestamp: Option<i64> = None;
     let mut messages_verified: u64 = 0;
+    let mut from_cursor: Option<String> = None;
 
     loop {
-        let rows = match store.list_message_metadata(
-            process_id,
-            after_timestamp,
-            BATCH_SIZE,
-        ) {
-            Ok(r) => r,
+        let mt_page = match store.get_messages(
+            &mt_process,
+            &from_cursor,
+            &None,
+            &Some(PAGE_SIZE),
+            &None,
+            &None,
+            &None,
+        ).await {
+            Ok(p) => p,
             Err(e) => return VerifyResult::Error(format!(
-                "Failed to list messages from multi-tenant: {:?}", e
+                "Failed to get_messages from multi-tenant (from={:?}): {:?}",
+                from_cursor, e
             )),
         };
 
-        if rows.is_empty() {
-            break;
-        }
+        let local_page = match local_store.get_messages(
+            &local_process,
+            &from_cursor,
+            &None,
+            &Some(PAGE_SIZE),
+            &None,
+            &None,
+            &None,
+        ).await {
+            Ok(p) => p,
+            Err(e) => return VerifyResult::Error(format!(
+                "Failed to get_messages from local store (from={:?}): {:?}",
+                from_cursor, e
+            )),
+        };
 
-        for row in &rows {
-            /*
-              Read the message binary from the multi-tenant bytestore
-            */
-            let mt_binary = match store.read_message_binary(
-                &row.process_id,
-                &row.message_id,
-                &row.assignment_id,
-                &row.timestamp.to_string(),
-            ) {
-                Ok(Some(b)) => b,
-                Ok(None) => {
-                    /*
-                      Fallback to postgres if not in bytestore
-                    */
-                    match store.get_message_bundle_from_db(
-                        &row.process_id,
-                        &row.message_id,
-                        &row.assignment_id,
-                    ) {
-                        Ok(b) => b,
-                        Err(e) => return VerifyResult::Error(format!(
-                            "Message '{}' assignment '{:?}' not in bytestore or db: {:?}",
-                            row.message_id, row.assignment_id, e
-                        )),
-                    }
-                }
+        let mt_edges = &mt_page.edges;
+        let local_edges = &local_page.edges;
+
+        let compare_len = std::cmp::min(mt_edges.len(), local_edges.len());
+
+        for i in 0..compare_len {
+            let mt_json = match serde_json::to_vec(&mt_edges[i]) {
+                Ok(j) => j,
                 Err(e) => return VerifyResult::Error(format!(
-                    "Failed to read message binary for '{}': {:?}",
-                    row.message_id, e
+                    "Failed to serialize mt edge {}: {}", messages_verified + i as u64, e
                 )),
             };
 
-            /*
-              Read the same message from the local store by assignment_id
-            */
-            let assignment_id = match &row.assignment_id {
-                Some(aid) => aid.clone(),
-                None => {
-                    /*
-                      Messages without assignments are legacy and should
-                      not exist in the local store. If the multi-tenant
-                      has one, it means this process was not fully cleaned
-                      during migration. Skip it.
-                    */
-                    return VerifyResult::Error(format!(
-                        "Message '{}' has no assignment_id (legacy message in multi-tenant)",
-                        row.message_id
-                    ));
-                }
+            let local_json = match serde_json::to_vec(&local_edges[i]) {
+                Ok(j) => j,
+                Err(e) => return VerifyResult::Error(format!(
+                    "Failed to serialize local edge {}: {}", messages_verified + i as u64, e
+                )),
             };
 
-            let local_binary = match local_store.get_bundle_by_assignment(
-                &assignment_id, process_id
-            ) {
-                Ok(b) => b,
-                Err(_) => {
-                    /*
-                      If the local store doesn't have this message, check
-                      if it's a trailing message (the multi-tenant got new
-                      writes after migration). This is acceptable - verify
-                      that ALL remaining messages in this batch and beyond
-                      are also missing (i.e. this is the tail).
-                    */
-                    logger.log(format!(
-                        "Process '{}': local store missing message at timestamp {}, \
-                         treating as acceptable tail divergence ({} messages verified so far)",
-                        process_id, row.timestamp, messages_verified
-                    ));
-                    return VerifyResult::Match { messages_verified };
-                }
-            };
-
-            if mt_binary != local_binary {
+            if mt_json != local_json {
                 return VerifyResult::Mismatch(format!(
-                    "Message bundle differs for assignment '{}' (message '{}', timestamp {}): \
-                     multi-tenant {} bytes vs local {} bytes",
-                    assignment_id, row.message_id, row.timestamp,
-                    mt_binary.len(), local_binary.len()
+                    "Message JSON differs at position {} (cursor mt='{}' local='{}'): {} vs {} bytes",
+                    messages_verified + i as u64,
+                    mt_edges[i].cursor,
+                    local_edges[i].cursor,
+                    mt_json.len(),
+                    local_json.len()
                 ));
             }
-
-            messages_verified += 1;
         }
 
-        after_timestamp = Some(rows.last().unwrap().timestamp);
+        messages_verified += compare_len as u64;
 
-        if (rows.len() as i64) < BATCH_SIZE {
+        /*
+          If local has fewer messages, the rest are acceptable
+          trailing writes on the live multi-tenant store.
+        */
+        if local_edges.len() < mt_edges.len() {
+            logger.log(format!(
+                "Process '{}': local store has fewer messages (acceptable tail), \
+                 {} verified before divergence",
+                process_id, messages_verified
+            ));
             break;
         }
+
+        if mt_edges.is_empty() || mt_edges.len() < PAGE_SIZE as usize {
+            break;
+        }
+
+        from_cursor = Some(mt_edges.last().unwrap().cursor.clone());
     }
 
     VerifyResult::Match { messages_verified }

@@ -432,10 +432,6 @@ impl LocalStoreClient {
         Ok((paginated_keys, has_next_page))
     }
 
-    pub fn get_process_bundle_public(&self, tx_id: &str) -> Result<Vec<u8>, StoreErrorType> {
-        self.get_process_bundle(tx_id)
-    }
-
     fn get_process_bundle(&self, tx_id: &str) -> Result<Vec<u8>, StoreErrorType> {
         let assignment_key = self.proc_assignment_key(tx_id);
         if let Some(process_bundle) = self.file_db.get(assignment_key.as_bytes())? {
