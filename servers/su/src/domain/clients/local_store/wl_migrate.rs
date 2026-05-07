@@ -6,6 +6,7 @@ use tokio::sync::Semaphore;
 use super::super::super::SuLog;
 use super::super::super::config::AoConfig;
 use super::super::super::core::dal::{DataStore, Log, Process, Message};
+use super::super::super::core::bytes::{DataBundle, DataItem};
 use super::super::store::StoreClient;
 use super::super::whitelist::FileUrlWhitelist;
 use super::store::LocalStoreClient;
@@ -224,17 +225,28 @@ fn migrate_process(
         logger.log(format!(
             "Process '{}' already exists in local store, skipping", process_id
         ));
-        return Ok(());
+    } else {
+        let bundle = store.get_process_bundle(process_id)
+            .map_err(|e| format!("{:?}", e))?;
+
+        let process = Process::from_bytes(bundle.clone(), &None)
+            .map_err(|e| format!("Failed to parse process bundle: {:?}", e))?;
+
+        local_store.save_process(&process, &bundle)
+            .map_err(|e| format!("{:?}", e))?;
     }
 
-    let bundle = store.get_process_bundle(process_id)
-        .map_err(|e| format!("{:?}", e))?;
-
-    let process = Process::from_bytes(bundle.clone(), &None)
-        .map_err(|e| format!("Failed to parse process bundle: {:?}", e))?;
-
-    local_store.save_process(&process, &bundle)
-        .map_err(|e| format!("{:?}", e))?;
+    /*
+      Migrate the deep hash version for this process.
+      This is a single value per process, idempotent on re-runs.
+    */
+    if let Some(version) = store.get_deep_hash_version_for_process(process_id) {
+        let cf = local_store.index_db.cf_handle("deep_hash_version")
+            .ok_or_else(|| "Column family 'deep_hash_version' not found".to_string())?;
+        let key = format!("deep_hash_version:{}", process_id);
+        local_store.index_db.put_cf(cf, key.as_bytes(), version.as_bytes())
+            .map_err(|e| format!("Failed to write deep hash version: {:?}", e))?;
+    }
 
     Ok(())
 }
@@ -340,12 +352,19 @@ fn migrate_messages(
             };
 
             /*
+              Compute the deep hash for this message if it is a pushed
+              message (has a From-Process tag). This replicates the logic
+              in flows.rs that computes the deep hash at ingest time.
+            */
+            let deep_hash = compute_deep_hash_from_bundle(&message, &bundle);
+
+            /*
               save_message is async in trait but the LocalStoreClient
               implementation is purely synchronous (RocksDB puts).
               We are already on a blocking thread so use Handle::block_on.
             */
             tokio::runtime::Handle::current().block_on(
-                local_store.save_message(&message, &bundle, None)
+                local_store.save_message(&message, &bundle, deep_hash.as_ref())
             ).map_err(|e| MigrateError::Other(format!("{:?}", e)))?;
 
             migrated += 1;
@@ -362,6 +381,42 @@ fn migrate_messages(
     }
 
     Ok(migrated)
+}
+
+/*
+  Compute the deep hash for a message from its bundle bytes.
+  Only messages with a "From-Process" tag (pushed messages from
+  other processes) have deep hashes. Returns None for messages
+  without From-Process or if parsing fails.
+
+  This replicates the logic in flows.rs that computes the deep
+  hash at ingest time:
+    1. Parse bundle bytes as a DataItem
+    2. Extract inner data bytes
+    3. Parse as a DataBundle
+    4. Take items[1] (the message data item)
+    5. Compute deep_hash(ordered=true)
+*/
+fn compute_deep_hash_from_bundle(message: &Message, bundle: &[u8]) -> Option<String> {
+    let msg = message.message.as_ref()?;
+
+    /*
+      Only compute deep hash for pushed messages (From-Process tag present)
+    */
+    if !msg.tags.iter().any(|tag| tag.name == "From-Process") {
+        return None;
+    }
+
+    let bundle_data_item = DataItem::from_bytes(bundle.to_vec()).ok()?;
+    let data_bytes = bundle_data_item.data_bytes()?;
+    let inner_bundle = DataBundle::from_bytes(&data_bytes).ok()?;
+
+    if inner_bundle.items.len() < 2 {
+        return None;
+    }
+
+    let mut message_item = inner_bundle.items[1].clone();
+    message_item.deep_hash(true).ok()
 }
 
 /*
