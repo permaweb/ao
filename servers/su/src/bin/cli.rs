@@ -2,6 +2,7 @@ use std::env;
 use std::io;
 use su::domain::reupload_bundles;
 use su::domain::migrate_whitelist;
+use su::domain::migrate_deep_hashes;
 use su::domain::verify_whitelist;
 
 #[tokio::main]
@@ -10,13 +11,16 @@ async fn main() -> io::Result<()> {
 
     if args.len() < 2 {
         eprintln!("Usage: {} <function_name>", args[0]);
-        eprintln!("Available functions: reupload_bundles, migrate_whitelist, verify_whitelist");
+        eprintln!("Available functions: reupload_bundles, migrate_whitelist, migrate_deep_hashes, verify_whitelist");
         return Ok(());
     }
 
     match args[1].as_str() {
         "migrate_whitelist" => {
             migrate_whitelist().await.unwrap();
+        }
+        "migrate_deep_hashes" => {
+            migrate_deep_hashes().await.unwrap();
         }
         "verify_whitelist" => {
             verify_whitelist().await.unwrap();
@@ -49,7 +53,7 @@ async fn main() -> io::Result<()> {
         }
         _ => {
             eprintln!("Invalid function name: {}", args[1]);
-            eprintln!("Available functions: reupload_bundles, migrate_whitelist, verify_whitelist");
+            eprintln!("Available functions: reupload_bundles, migrate_whitelist, migrate_deep_hashes, verify_whitelist");
         }
     }
 

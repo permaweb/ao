@@ -886,6 +886,24 @@ impl StoreClient {
         }
     }
 
+    /*
+      Get all deep hashes for a process from its tenant bytestore.
+      Returns a Vec of deep_hash strings.
+    */
+    pub fn get_deep_hashes_for_process(&self, process_id: &str) -> Result<Vec<String>, String> {
+        let bytestore = self.get_bytestore(&process_id.to_string());
+        bytestore.iter_deep_hashes_for_process(process_id)
+    }
+
+    /*
+      Get the deep hash version for a process from its tenant bytestore.
+      Returns None if no version is stored.
+    */
+    pub fn get_deep_hash_version_for_process(&self, process_id: &str) -> Option<String> {
+        let bytestore = self.get_bytestore(&process_id.to_string());
+        bytestore.get_deep_hash_version(&process_id.to_string()).ok()
+    }
+
 }
 
 /*
@@ -2242,6 +2260,54 @@ mod bytestore {
                 }
             } else {
                 false
+            }
+        }
+
+        /*
+          Iterate all deep hash entries for a given process_id.
+          Returns a Vec of deep_hash strings found in this bytestore
+          with the prefix `deephash___<process_id>___`.
+        */
+        pub fn iter_deep_hashes_for_process(&self, process_id: &str) -> Result<Vec<String>, String> {
+            let prefix = format!("deephash___{}___", process_id).into_bytes();
+
+            let db = match self.db.read() {
+                Ok(r) => r,
+                Err(_) => return Err("Failed to acquire read lock".into()),
+            };
+
+            if let Some(ref db) = *db {
+                let iter = db.prefix_iterator(&prefix);
+                let mut deep_hashes = Vec::new();
+
+                for item in iter {
+                    let (key, _) = item.map_err(|e| format!("RocksDB iter error: {:?}", e))?;
+
+                    /*
+                      Stop iteration once we leave the prefix range.
+                      prefix_iterator may continue past the prefix in
+                      RocksDB without a prefix extractor configured.
+                    */
+                    if !key.starts_with(&prefix) {
+                        break;
+                    }
+
+                    let key_str = String::from_utf8(key.to_vec())
+                        .map_err(|e| format!("Invalid UTF-8 key: {:?}", e))?;
+
+                    /*
+                      Key format: deephash___<process_id>___<deep_hash>
+                      Extract the deep_hash portion after the second "___"
+                    */
+                    let prefix_str = format!("deephash___{}___", process_id);
+                    if let Some(deep_hash) = key_str.strip_prefix(&prefix_str) {
+                        deep_hashes.push(deep_hash.to_string());
+                    }
+                }
+
+                Ok(deep_hashes)
+            } else {
+                Err("Database is not initialized".into())
             }
         }
     }
