@@ -24,6 +24,7 @@ pub use clients::whitelist::FileUrlWhitelist;
 pub use clients::local_store::wl_migrate::migrate_whitelist;
 pub use clients::local_store::wl_migrate_deephash::migrate_deep_hashes;
 pub use clients::local_store::wl_verify::verify_whitelist;
+pub use clients::local_store::wl_fast_verify::fast_verify;
 pub use core::flows;
 pub use core::router;
 pub use core::bytes;

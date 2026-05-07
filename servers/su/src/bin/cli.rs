@@ -4,6 +4,7 @@ use su::domain::reupload_bundles;
 use su::domain::migrate_whitelist;
 use su::domain::migrate_deep_hashes;
 use su::domain::verify_whitelist;
+use su::domain::fast_verify;
 
 #[tokio::main]
 async fn main() -> io::Result<()> {
@@ -11,7 +12,7 @@ async fn main() -> io::Result<()> {
 
     if args.len() < 2 {
         eprintln!("Usage: {} <function_name>", args[0]);
-        eprintln!("Available functions: reupload_bundles, migrate_whitelist, migrate_deep_hashes, verify_whitelist");
+        eprintln!("Available functions: reupload_bundles, migrate_whitelist, migrate_deep_hashes, verify_whitelist, fast_verify");
         return Ok(());
     }
 
@@ -24,6 +25,9 @@ async fn main() -> io::Result<()> {
         }
         "verify_whitelist" => {
             verify_whitelist().await.unwrap();
+        }
+        "fast_verify" => {
+            fast_verify().await.unwrap();
         }
         "reupload_bundles" => {
             let pids = if args.len() > 3 {
@@ -53,7 +57,7 @@ async fn main() -> io::Result<()> {
         }
         _ => {
             eprintln!("Invalid function name: {}", args[1]);
-            eprintln!("Available functions: reupload_bundles, migrate_whitelist, migrate_deep_hashes, verify_whitelist");
+            eprintln!("Available functions: reupload_bundles, migrate_whitelist, migrate_deep_hashes, verify_whitelist, fast_verify");
         }
     }
 
