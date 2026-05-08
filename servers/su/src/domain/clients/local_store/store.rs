@@ -255,18 +255,6 @@ impl LocalStoreClient {
         let mut has_next_page = false;
         let mut count = 0;
 
-        /*
-          For timestamp_sort processes, collect limit + 1000 keys
-          to give enough buffer to catch misordered messages, then
-          sort and truncate. For normal processes, use the standard
-          early-break behavior.
-        */
-        let collect_limit = if timestamp_sort {
-            limit.map(|l| l + 1000)
-        } else {
-            *limit
-        };
-
         for item in iter {
             let (key, assignment_id_bytes) = item?;
             let key_str = String::from_utf8(key.to_vec())?;
@@ -295,8 +283,11 @@ impl LocalStoreClient {
             if let Some(ref to_str) = to {
                 if let Ok(to_timestamp) = to_str.parse::<i64>() {
                     if timestamp > to_timestamp {
-                        has_next_page = false;
-                        break;
+                        if !timestamp_sort {
+                            has_next_page = false;
+                            break;
+                        }
+                        continue;
                     }
                 }
             }
@@ -304,15 +295,17 @@ impl LocalStoreClient {
             paginated_keys.push((key_str.clone(), assignment_id));
             count += 1;
 
-            match collect_limit {
-                Some(actual_limit) => {
-                    if count >= actual_limit {
-                        has_next_page = true;
-                        break;
+            if !timestamp_sort {
+                match limit {
+                    Some(actual_limit) => {
+                        if count >= *actual_limit {
+                            has_next_page = true;
+                            break;
+                        }
                     }
-                }
-                _ => (),
-            };
+                    _ => (),
+                };
+            }
         }
 
         if timestamp_sort {
@@ -360,12 +353,6 @@ impl LocalStoreClient {
         let mut has_next_page = false;
         let mut count = 0;
 
-        let collect_limit = if timestamp_sort {
-            limit.map(|l| l + 1000)
-        } else {
-            *limit
-        };
-
         for item in iter {
             let (key, assignment_id_bytes) = item?;
             let key_str = String::from_utf8(key.to_vec())?;
@@ -398,8 +385,11 @@ impl LocalStoreClient {
             if let Some(ref to_str) = to_nonce {
                 if let Ok(to_nonce_s) = to_str.parse::<i32>() {
                     if nonce > to_nonce_s {
-                        has_next_page = false;
-                        break;
+                        if !timestamp_sort {
+                            has_next_page = false;
+                            break;
+                        }
+                        continue;
                     }
                 }
             }
@@ -407,15 +397,17 @@ impl LocalStoreClient {
             paginated_keys.push((key_str.clone(), assignment_id));
             count += 1;
 
-            match collect_limit {
-                Some(actual_limit) => {
-                    if count >= actual_limit {
-                        has_next_page = true;
-                        break;
+            if !timestamp_sort {
+                match limit {
+                    Some(actual_limit) => {
+                        if count >= *actual_limit {
+                            has_next_page = true;
+                            break;
+                        }
                     }
-                }
-                _ => (),
-            };
+                    _ => (),
+                };
+            }
         }
 
         if timestamp_sort {
