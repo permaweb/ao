@@ -305,64 +305,66 @@ impl LocalStoreClient {
             };
         }
 
-        if self.sort_order == "timestamp" && has_next_page {
+        if self.sort_order == "timestamp" {
             /*
-              Lookahead: scan up to 1000 more keys beyond the limit
-              looking for messages with timestamps that belong in this
-              page (less than or equal to the max timestamp we collected).
-              This catches misordered messages that crossed the page boundary
-              due to nonce-based key ordering.
+              Lookahead: if there are more keys beyond this page,
+              scan up to 1000 more looking for messages with timestamps
+              that belong in this page (less than or equal to the max
+              timestamp we collected). This catches misordered messages
+              that crossed the page boundary due to nonce-based key ordering.
             */
-            let max_ts = paginated_keys.iter()
-                .filter_map(|(k, _)| k.split(':').nth(4)?.parse::<i64>().ok())
-                .max()
-                .unwrap_or(i64::MAX);
+            if has_next_page && !paginated_keys.is_empty() {
+                let max_ts = paginated_keys.iter()
+                    .filter_map(|(k, _)| k.split(':').nth(4)?.parse::<i64>().ok())
+                    .max()
+                    .unwrap_or(i64::MAX);
 
-            let mut lookahead_count = 0;
-            let cf = self.index_db.cf_handle("message_ordering").ok_or_else(|| {
-                StoreErrorType::DatabaseError("Column family 'message_ordering' not found".to_string())
-            })?;
+                let mut lookahead_count = 0;
+                let cf = self.index_db.cf_handle("message_ordering").ok_or_else(|| {
+                    StoreErrorType::DatabaseError("Column family 'message_ordering' not found".to_string())
+                })?;
 
-            let last_key = &paginated_keys.last().unwrap().0;
-            let iter = self.index_db.prefix_iterator_cf(cf, last_key.as_bytes());
-            let mut skipped_first = false;
+                let last_key = &paginated_keys.last().unwrap().0;
+                let iter = self.index_db.prefix_iterator_cf(cf, last_key.as_bytes());
+                let mut skipped_first = false;
 
-            for item in iter {
-                let (key, assignment_id_bytes) = item?;
-                let key_str = String::from_utf8(key.to_vec())?;
+                for item in iter {
+                    let (key, assignment_id_bytes) = item?;
+                    let key_str = String::from_utf8(key.to_vec())?;
 
-                if !skipped_first {
-                    skipped_first = true;
-                    continue;
-                }
+                    if !skipped_first {
+                        skipped_first = true;
+                        continue;
+                    }
 
-                let parts: Vec<&str> = key_str.split(':').collect();
-                if parts.len() < 5 {
-                    continue;
-                }
+                    let parts: Vec<&str> = key_str.split(':').collect();
+                    if parts.len() < 5 {
+                        continue;
+                    }
 
-                let timestamp = parts[4].parse::<i64>().unwrap_or(0);
+                    let timestamp = parts[4].parse::<i64>().unwrap_or(0);
 
-                if let Some(ref to_str) = to {
-                    if let Ok(to_timestamp) = to_str.parse::<i64>() {
-                        if timestamp > to_timestamp {
-                            lookahead_count += 1;
-                            if lookahead_count >= 1000 {
-                                break;
+                    if let Some(ref to_str) = to {
+                        if let Ok(to_timestamp) = to_str.parse::<i64>() {
+                            if timestamp > to_timestamp {
+                                lookahead_count += 1;
+                                if lookahead_count >= 1000 {
+                                    break;
+                                }
+                                continue;
                             }
-                            continue;
                         }
                     }
-                }
 
-                if timestamp <= max_ts {
-                    let assignment_id = String::from_utf8(assignment_id_bytes.to_vec())?;
-                    paginated_keys.push((key_str, assignment_id));
-                }
+                    if timestamp <= max_ts {
+                        let assignment_id = String::from_utf8(assignment_id_bytes.to_vec())?;
+                        paginated_keys.push((key_str, assignment_id));
+                    }
 
-                lookahead_count += 1;
-                if lookahead_count >= 1000 {
-                    break;
+                    lookahead_count += 1;
+                    if lookahead_count >= 1000 {
+                        break;
+                    }
                 }
             }
 
@@ -464,64 +466,66 @@ impl LocalStoreClient {
             };
         }
 
-        if self.sort_order == "timestamp" && has_next_page {
+        if self.sort_order == "timestamp" {
             /*
-              Lookahead: scan up to 1000 more keys beyond the limit
-              looking for messages with timestamps that belong in this
-              page. This catches misordered messages that crossed the
-              page boundary due to nonce-based key ordering.
+              Lookahead: if there are more keys beyond this page,
+              scan up to 1000 more looking for messages with timestamps
+              that belong in this page. This catches misordered messages
+              that crossed the page boundary due to nonce-based key ordering.
             */
-            let max_ts = paginated_keys.iter()
-                .filter_map(|(k, _)| k.split(':').nth(4)?.parse::<i64>().ok())
-                .max()
-                .unwrap_or(i64::MAX);
+            if has_next_page && !paginated_keys.is_empty() {
+                let max_ts = paginated_keys.iter()
+                    .filter_map(|(k, _)| k.split(':').nth(4)?.parse::<i64>().ok())
+                    .max()
+                    .unwrap_or(i64::MAX);
 
-            let mut lookahead_count = 0;
-            let cf = self.index_db.cf_handle("message_ordering").ok_or_else(|| {
-                StoreErrorType::DatabaseError("Column family 'message_ordering' not found".to_string())
-            })?;
+                let mut lookahead_count = 0;
+                let cf = self.index_db.cf_handle("message_ordering").ok_or_else(|| {
+                    StoreErrorType::DatabaseError("Column family 'message_ordering' not found".to_string())
+                })?;
 
-            let last_key = &paginated_keys.last().unwrap().0;
-            let iter = self.index_db.prefix_iterator_cf(cf, last_key.as_bytes());
-            let mut skipped_first = false;
+                let last_key = &paginated_keys.last().unwrap().0;
+                let iter = self.index_db.prefix_iterator_cf(cf, last_key.as_bytes());
+                let mut skipped_first = false;
 
-            for item in iter {
-                let (key, assignment_id_bytes) = item?;
-                let key_str = String::from_utf8(key.to_vec())?;
+                for item in iter {
+                    let (key, assignment_id_bytes) = item?;
+                    let key_str = String::from_utf8(key.to_vec())?;
 
-                if !skipped_first {
-                    skipped_first = true;
-                    continue;
-                }
+                    if !skipped_first {
+                        skipped_first = true;
+                        continue;
+                    }
 
-                let parts: Vec<&str> = key_str.split(':').collect();
-                if parts.len() < 5 {
-                    continue;
-                }
+                    let parts: Vec<&str> = key_str.split(':').collect();
+                    if parts.len() < 5 {
+                        continue;
+                    }
 
-                let timestamp = parts[4].parse::<i64>().unwrap_or(0);
+                    let timestamp = parts[4].parse::<i64>().unwrap_or(0);
 
-                if let Some(ref to_str) = to_nonce {
-                    if let Ok(to_nonce_s) = to_str.parse::<i32>() {
-                        let nonce = parts[3].parse::<i32>().unwrap_or(0);
-                        if nonce > to_nonce_s {
-                            lookahead_count += 1;
-                            if lookahead_count >= 1000 {
-                                break;
+                    if let Some(ref to_str) = to_nonce {
+                        if let Ok(to_nonce_s) = to_str.parse::<i32>() {
+                            let nonce = parts[3].parse::<i32>().unwrap_or(0);
+                            if nonce > to_nonce_s {
+                                lookahead_count += 1;
+                                if lookahead_count >= 1000 {
+                                    break;
+                                }
+                                continue;
                             }
-                            continue;
                         }
                     }
-                }
 
-                if timestamp <= max_ts {
-                    let assignment_id = String::from_utf8(assignment_id_bytes.to_vec())?;
-                    paginated_keys.push((key_str, assignment_id));
-                }
+                    if timestamp <= max_ts {
+                        let assignment_id = String::from_utf8(assignment_id_bytes.to_vec())?;
+                        paginated_keys.push((key_str, assignment_id));
+                    }
 
-                lookahead_count += 1;
-                if lookahead_count >= 1000 {
-                    break;
+                    lookahead_count += 1;
+                    if lookahead_count >= 1000 {
+                        break;
+                    }
                 }
             }
 
