@@ -1,3 +1,4 @@
+use std::collections::HashSet;
 use std::env;
 use std::path::PathBuf;
 
@@ -67,7 +68,7 @@ pub struct AoConfig {
     pub multi_tenant_base_read_conn: String,
     pub multi_tenant_base_data_dir: String,
     pub url: String,
-    pub local_store_sort_order: String,
+    pub timestamp_sort_processes: HashSet<String>,
 }
 
 fn get_db_dirs() -> (String, String, String, String) {
@@ -287,10 +288,14 @@ impl AoConfig {
             Err(_e) => "".to_string(),
         };
 
-        let local_store_sort_order: String = match env::var("LOCAL_STORE_SORT_ORDER") {
-            Ok(val) => val,
-            Err(_e) => "nonce".to_string(),
-        };
+        let timestamp_sort_processes: HashSet<String> =
+            match env::var("TIMESTAMP_SORT_PROCESSES") {
+                Ok(val) => val.split(',')
+                    .map(|s| s.trim().to_string())
+                    .filter(|s| !s.is_empty())
+                    .collect(),
+                Err(_e) => HashSet::new(),
+            };
 
         Ok(AoConfig {
             database_url: env::var("DATABASE_URL")?,
@@ -335,7 +340,7 @@ impl AoConfig {
             multi_tenant_base_read_conn,
             multi_tenant_base_data_dir,
             url,
-            local_store_sort_order,
+            timestamp_sort_processes,
         })
     }
 }
