@@ -1,4 +1,4 @@
-import { describe, test, before, after } from 'node:test'
+import { describe, test, before } from 'node:test'
 import * as assert from 'node:assert'
 
 import AOCore, { createSigner } from '@permaweb/ao-core-libs'
@@ -17,139 +17,235 @@ const WALLET = {
 }
 
 const url = process.argv[2] || 'http://localhost:8734';
-const scheduler = 'NoZH3pueH0Cih6zjSNu_KRAcmg4ZJV1aGHKi0Pi5_Hc';
-const module = 'URgYpPQzvxxfYQtjrIQ116bl3YBfcImo3JEnNo8Hlrk';
+const scheduler = 'mYJTM8VpIibDLuyGLQTcbcPy-LeOY48qzECADTUYfWc';
+const module = 'ISShJH1ij-hPPt9St5UFFr_8Ys3Kj5cyg7zrMGt7H9s';
 
 console.log(`[AO Connect Client] Testing on URL: ${url}`);
 
-const aoCore = AOCore.init({ signer: createSigner(WALLET), url })
+const createConnectDeps = (signer) => ({
+  aoCore: AOCore.init({ signer, url }),
+  url,
+  scheduler
+})
 
-const connectDeps = { aoCore, url, scheduler }
+const createCoreClients = (connectDeps) => ({
+  coreRequest: CoreClient.requestWith(connectDeps),
+  coreSpawn: CoreClient.spawnWith(connectDeps),
+  coreMessage: CoreClient.messageWith(connectDeps),
+  coreResult: CoreClient.resultWith(connectDeps),
+  coreResults: CoreClient.resultsWith(connectDeps),
+  coreDryrun: CoreClient.dryrunWith(connectDeps)
+})
 
-const coreRequest = CoreClient.requestWith(connectDeps)
-const coreSpawn = CoreClient.spawnWith(connectDeps)
-const coreMessage = CoreClient.messageWith(connectDeps)
-const coreResult = CoreClient.resultWith(connectDeps)
-const coreResults = CoreClient.resultsWith(connectDeps)
-const coreDryrun = CoreClient.dryrunWith(connectDeps)
+const rsaConnectDeps = createConnectDeps(createSigner(WALLET))
 
-let processId
+function logError(message) {
+  console.error('\x1b[31m%s\x1b[0m', `Error (${message})`);
+}
 
-describe('ao-core (shared process)', () => {
-  before(async () => {
-    processId = await coreSpawn({
-      module: module,
-      tags: [{ name: 'Name', value: Date.now().toString() }]
-    })
-    console.log(`Spawned shared process: ${processId}`)
-  }, { timeout: 30_000 })
+async function createEthSigner() {
+	try {
+		const { EthereumSigner } = await import('@dha-team/arbundles');
+		// Use a test private key (DO NOT use in production)
+		const testPrivateKey = '37929fc21ab44ace162318acbbf4d24a41270b2aee18fd1cfb22e3fc3f4b4024';
+		const ethSigner = new EthereumSigner(testPrivateKey);
+		const publicKey = Buffer.from(ethSigner.publicKey);
+		const signerAddress = publicKey.toString('base64url');
 
-  describe('spawn', () => {
-    test('spawn a process with ao-core', () => {
-      assert.equal(typeof processId, 'string')
-    })
-  })
+		// Wrap the arbundles signer to match ao-core-libs signer interface
+		return async (create, kind) => {
+			if (kind === 'ans104') {
+				// For ANS-104 signing, we need to call create and then sign
+				const deepHash = await create({
+					type: ethSigner.signatureType,
+					publicKey,
+					alg: 'ethereum',
+				});
 
+				const signature = await ethSigner.sign(deepHash);
+
+				return {
+					signature: Buffer.from(signature),
+					address: signerAddress,
+				};
+			} else if (kind === 'httpsig') {
+				// For HTTP signature signing
+				const signatureBase = await create({
+					type: ethSigner.signatureType,
+					publicKey,
+					alg: 'ethereum',
+				});
+
+				const signature = await ethSigner.sign(signatureBase);
+
+				return {
+					signature: Buffer.from(signature),
+					address: signerAddress,
+				};
+			}
+			throw new Error(`Unknown signer kind: ${kind}`);
+		};
+	} catch (e) {
+		logError('Failed to create Ethereum signer: ' + e.message);
+		return null;
+	}
+}
+
+async function createEthConnectDeps() {
+  const ethSigner = await createEthSigner()
+  assert.ok(ethSigner, 'Ethereum signer should be available')
+
+  return createConnectDeps(ethSigner)
+}
+
+describe('ao-core ethereum signer', () => {
   describe('request', () => {
-    test('send a request with ao-core', async () => {
-      console.log(`Using shared process (${processId})...`)
-      const response = await coreRequest({
-        path: `/${processId}/slot/current`,
-        method: 'POST',
-        'signing-format': 'ans104',
-        'accept-bundle': 'true',
-        'accept-codec': 'httpsig@1.0'
+    test('send an HTTP-SIG GET with an Ethereum signer', async () => {
+      const ethRequest = CoreClient.requestWith(await createEthConnectDeps())
+      const response = await ethRequest({
+        path: '~meta@1.0/info/address',
+        method: 'GET',
+        'signing-format': 'httpsig'
       })
 
-      const currentSlot = await response.text();
-      assert.ok(Number.isFinite(Number(currentSlot)), 'currentSlot should be a number')
+      assert.equal(response.status, 200)
+      assert.equal(typeof await response.text(), 'string')
     }, { timeout: 30_000 })
   })
+})
 
-  describe('message', () => {
-    test('send a message with ao-core', async () => {
-      console.log(`Using shared process (${processId})...`)
-      const result = await coreMessage({
-        process: processId,
-        tags: [{ name: 'Action', value: 'Eval' }, { name: 'Time', value: Date.now().toString() }],
-        data: 'require(\'.process\')._version'
-      })
-      assert.equal(typeof result, 'number')
-    }, { timeout: 30_000 })
-  })
+function sharedProcessSuite(name, getConnectDeps) {
+  describe(`ao-core (${name} shared process)`, () => {
+    let processId
+    let coreRequest
+    let coreSpawn
+    let coreMessage
+    let coreResult
+    let coreResults
+    let coreDryrun
 
-  describe('message - full response', () => {
-    test('send a message with ao-core (full response)', async () => {
-      console.log(`Using shared process (${processId})...`)
-      const result = await coreMessage({
-        process: processId,
-        tags: [{ name: 'Action', value: 'Eval' }, { name: 'Time', value: Date.now().toString() }],
-        data: 'require(\'.process\')._version',
-        opts: { fullResponse: true }
-      })
-      assert.strictEqual(result.Messages.length, 0)
-    }, { timeout: 30_000 })
-  })
+    before(async () => {
+      const clients = createCoreClients(await getConnectDeps())
 
-  describe('result', () => {
-    test('get the result of an ao-core message', async () => {
-      console.log(`Using shared process (${processId})...`)
-      const message = await coreMessage({
-        process: processId,
-        tags: [{ name: 'Action', value: 'Eval' }, { name: 'Time', value: Date.now().toString() }],
-        data: 'require(\'.process\')._version'
-      })
+      coreRequest = clients.coreRequest
+      coreSpawn = clients.coreSpawn
+      coreMessage = clients.coreMessage
+      coreResult = clients.coreResult
+      coreResults = clients.coreResults
+      coreDryrun = clients.coreDryrun
 
-      const result = await coreResult({
-        process: processId,
-        message
-      })
-      assert.strictEqual(result.Messages.length, 0)
-    }, { timeout: 30_000 })
-  })
-
-  describe('results', () => {
-    test('get the results of the shared process', async () => {
-      console.log(`Using shared process (${processId})...`)
-      const results = await coreResults({ process: processId })
-      console.log(results)
-    }, { timeout: 30_000 })
-  })
-
-  describe('spawn and message (fresh)', () => {
-    test('spawn and send a message with ao-core (fresh process for this test)', async () => {
-      const freshProcessId = await coreSpawn({
+      processId = await coreSpawn({
         module: module,
         tags: [{ name: 'Name', value: Date.now().toString() }]
       })
-
-      console.log(`Fresh process ID: ${freshProcessId}`)
-      assert.equal(typeof freshProcessId, 'string')
-
-      const message = await coreMessage({
-        process: freshProcessId,
-        tags: [{ name: 'Action', value: 'Eval' }, { name: 'Time', value: Date.now().toString() }],
-        data: 'require(\'.process\')._version'
-      })
-
-      assert.equal(typeof message, 'number')
+      console.log(`[${name}] Spawned shared process: ${processId}`)
     }, { timeout: 30_000 })
-  })
 
-  describe('spawn, add handlers, dryrun', () => {
-    test('spawn, add handlers, dryrun', async () => {
-      const freshProcessId = await coreSpawn({
-        module: module,
-        tags: [{ name: 'Name', value: Date.now().toString() }]
+    describe('spawn', () => {
+      test('spawn a process with ao-core', () => {
+        assert.equal(typeof processId, 'string')
       })
+    })
 
-      console.log(`Fresh process ID: ${freshProcessId}`)
-      assert.equal(typeof freshProcessId, 'string')
+    describe('request', () => {
+      test('send a request with ao-core', async () => {
+        console.log(`[${name}] Using shared process (${processId})...`)
+        const response = await coreRequest({
+          path: `/${processId}/slot/current`,
+          method: 'POST',
+          'signing-format': 'ans104',
+          'accept-bundle': 'true',
+          'accept-codec': 'httpsig@1.0'
+        })
 
-      const message = await coreMessage({
-        process: freshProcessId,
-        tags: [{ name: 'Action', value: 'Eval' }, { name: 'Time', value: Date.now().toString() }],
-        data: `
+        const currentSlot = await response.text();
+        assert.ok(Number.isFinite(Number(currentSlot)), 'currentSlot should be a number')
+      }, { timeout: 30_000 })
+    })
+
+    describe('message', () => {
+      test('send a message with ao-core', async () => {
+        console.log(`[${name}] Using shared process (${processId})...`)
+        const result = await coreMessage({
+          process: processId,
+          tags: [{ name: 'Action', value: 'Eval' }, { name: 'Time', value: Date.now().toString() }],
+          data: 'require(\'.process\')._version'
+        })
+        assert.equal(typeof result, 'number')
+      }, { timeout: 30_000 })
+    })
+
+    describe('message - full response', () => {
+      test('send a message with ao-core (full response)', async () => {
+        console.log(`[${name}] Using shared process (${processId})...`)
+        const result = await coreMessage({
+          process: processId,
+          tags: [{ name: 'Action', value: 'Eval' }, { name: 'Time', value: Date.now().toString() }],
+          data: 'require(\'.process\')._version',
+          opts: { fullResponse: true }
+        })
+        assert.strictEqual(result.Messages.length, 0)
+      }, { timeout: 30_000 })
+    })
+
+    describe('result', () => {
+      test('get the result of an ao-core message', async () => {
+        console.log(`[${name}] Using shared process (${processId})...`)
+        const message = await coreMessage({
+          process: processId,
+          tags: [{ name: 'Action', value: 'Eval' }, { name: 'Time', value: Date.now().toString() }],
+          data: 'require(\'.process\')._version'
+        })
+
+        const result = await coreResult({
+          process: processId,
+          message
+        })
+        assert.strictEqual(result.Messages.length, 0)
+      }, { timeout: 30_000 })
+    })
+
+    describe('results', () => {
+      test('get the results of the shared process', async () => {
+        console.log(`[${name}] Using shared process (${processId})...`)
+        await coreResults({ process: processId })
+      }, { timeout: 30_000 })
+    })
+
+    describe('spawn and message (fresh)', () => {
+      test('spawn and send a message with ao-core (fresh process for this test)', async () => {
+        const freshProcessId = await coreSpawn({
+          module: module,
+          tags: [{ name: 'Name', value: Date.now().toString() }]
+        })
+
+        console.log(`[${name}] Fresh process ID: ${freshProcessId}`)
+        assert.equal(typeof freshProcessId, 'string')
+
+        const message = await coreMessage({
+          process: freshProcessId,
+          tags: [{ name: 'Action', value: 'Eval' }, { name: 'Time', value: Date.now().toString() }],
+          data: 'require(\'.process\')._version'
+        })
+
+        assert.equal(typeof message, 'number')
+      }, { timeout: 30_000 })
+    })
+
+    describe('spawn, add handlers, dryrun', () => {
+      test('spawn, add handlers, dryrun', async () => {
+        const freshProcessId = await coreSpawn({
+          module: module,
+          tags: [{ name: 'Name', value: Date.now().toString() }]
+        })
+
+        console.log(`[${name}] Fresh process ID: ${freshProcessId}`)
+        assert.equal(typeof freshProcessId, 'string')
+
+        const message = await coreMessage({
+          process: freshProcessId,
+          tags: [{ name: 'Action', value: 'Eval' }, { name: 'Time', value: Date.now().toString() }],
+          data: `
                 Handlers.add('Info', 'Info', function(msg)
                     ao.send({
                         Target = msg.From,
@@ -161,20 +257,20 @@ describe('ao-core (shared process)', () => {
                     })
                 end)
                 `
-      })
-      assert.equal(typeof message, 'number')
+        })
+        assert.equal(typeof message, 'number')
 
-      const dryrun = await coreDryrun({
-        process: freshProcessId,
-        tags: [{ name: 'Action', value: 'Info' }, { name: 'Test', value: 'Value' }, { name: 'Time', value: Date.now().toString() }]
-      })
-      assert.equal(dryrun.Messages.length, 2)
-      assert.equal(dryrun.Messages[0].Data, '{"Hello":"World"}')
-      assert.equal(dryrun.Messages[1].Data, '{"Hello":"World 2"}')
-    }, { timeout: 30_000 })
+        const dryrun = await coreDryrun({
+          process: freshProcessId,
+          tags: [{ name: 'Action', value: 'Info' }, { name: 'Test', value: 'Value' }, { name: 'Time', value: Date.now().toString() }]
+        })
+        assert.equal(dryrun.Messages.length, 2)
+        assert.equal(dryrun.Messages[0].Data, '{"Hello":"World"}')
+        assert.equal(dryrun.Messages[1].Data, '{"Hello":"World 2"}')
+      }, { timeout: 30_000 })
+    })
   })
+}
 
-  after(() => {
-    process.exit(process.exitCode || 0);
-  });
-})
+sharedProcessSuite('RSA signer', () => rsaConnectDeps)
+sharedProcessSuite('Ethereum signer', createEthConnectDeps)
