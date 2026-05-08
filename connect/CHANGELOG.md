@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.0.96](https://github.com/permaweb/ao/compare/connect@v0.0.95...connect@v0.0.96) (2026-05-08)
+
+
+### Features
+
+* add support for eth signatures ([c172212](https://github.com/permaweb/ao/commit/c1722129c28d2962a86d02f6e8ed45775a2c45f1))
+
 ## [0.0.95](https://github.com/permaweb/ao/compare/connect@v0.0.94...connect@v0.0.95) (2026-05-06)
 
 
