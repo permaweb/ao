@@ -70,20 +70,6 @@ impl FileUrlWhitelist {
         let whitelist = Arc::new(RwLock::new(whitelist));
 
         let whitelist_clone = whitelist.clone();
-        tokio::spawn(async move {
-            loop {
-                tokio::time::sleep(tokio::time::Duration::from_secs(10)).await;
-                match fetch_whitelist(&client, &url).await {
-                    Ok(updated) => {
-                        *whitelist_clone.write().unwrap() = updated;
-                        logger.log("Process whitelist refreshed".to_string());
-                    }
-                    Err(e) => {
-                        logger.error(format!("Failed to refresh process whitelist: {e}"));
-                    }
-                }
-            }
-        });
 
         Ok(Self { whitelist, own_url: own_url.clone(), router_mode })
     }

@@ -37,7 +37,7 @@ fn excluded_processes() -> HashSet<String> {
 }
 
 enum VerifyResult {
-    Match { messages_verified: u64 },
+    Match { messages_verified: u64, mismatches: u64 },
     Error(String),
 }
 
@@ -132,14 +132,26 @@ pub async fn verify_whitelist() -> Result<(), String> {
             let result = verify_process_async(&store, &local_store, &pid, &logger).await;
 
             match result {
-                VerifyResult::Match { messages_verified } => {
+                VerifyResult::Match { messages_verified, mismatches } => {
                     total_processes.fetch_add(1, Ordering::Relaxed);
                     total_messages.fetch_add(messages_verified, Ordering::Relaxed);
+                    if mismatches > 0 {
+                        total_errors.fetch_add(1, Ordering::Relaxed);
+                        logger_for_log.log(format!(
+                            "VERIFIED WITH MISMATCHES Process '{}': {} messages, {} mismatches",
+                            pid_for_log, messages_verified, mismatches
+                        ));
+                    } else {
+                        logger_for_log.log(format!(
+                            "VERIFIED Process '{}': OK ({} messages)",
+                            pid_for_log, messages_verified
+                        ));
+                    }
                 }
                 VerifyResult::Error(e) => {
                     total_errors.fetch_add(1, Ordering::Relaxed);
                     logger_for_log.error(format!(
-                        "ERROR verifying process '{}': {}", pid_for_log, e
+                        "FAILED Process '{}': {}", pid_for_log, e
                     ));
                 }
             }
@@ -231,6 +243,7 @@ async fn verify_process_async(
       Page through messages comparing JSON of each edge
     */
     let mut messages_verified: u64 = 0;
+    let mut mismatches: u64 = 0;
     let mut from_cursor: Option<String> = None;
 
     loop {
@@ -287,6 +300,7 @@ async fn verify_process_async(
             };
 
             if mt_json != local_json {
+                mismatches += 1;
                 logger.error(format!(
                     "Process '{}': Message JSON differs at position {} (cursor mt='{}' local='{}'): {} vs {} bytes",
                     process_id,
@@ -321,5 +335,5 @@ async fn verify_process_async(
         from_cursor = Some(mt_edges.last().unwrap().cursor.clone());
     }
 
-    VerifyResult::Match { messages_verified }
+    VerifyResult::Match { messages_verified, mismatches }
 }

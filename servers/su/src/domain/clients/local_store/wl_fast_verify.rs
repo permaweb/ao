@@ -231,13 +231,25 @@ pub async fn fast_verify() -> Result<(), String> {
                 ).await;
 
                 match result {
-                    Ok(count) => {
+                    Ok((count, mismatches)) => {
                         total_messages.fetch_add(count, Ordering::Relaxed);
+                        if mismatches > 0 {
+                            total_errors.fetch_add(1, Ordering::Relaxed);
+                            logger.log(format!(
+                                "VERIFIED WITH MISMATCHES Process '{}' segment {}: {} messages, {} mismatches",
+                                pid, seg_idx, count, mismatches
+                            ));
+                        } else {
+                            logger.log(format!(
+                                "VERIFIED Process '{}' segment {}: OK ({} messages)",
+                                pid, seg_idx, count
+                            ));
+                        }
                     }
                     Err(e) => {
                         total_errors.fetch_add(1, Ordering::Relaxed);
                         logger.error(format!(
-                            "Process '{}' segment {}: {}", pid, seg_idx, e
+                            "FAILED Process '{}' segment {}: {}", pid, seg_idx, e
                         ));
                     }
                 }
@@ -325,8 +337,9 @@ async fn verify_segment(
     from_ts: Option<i64>,
     to_ts: Option<i64>,
     logger: &Arc<dyn Log>,
-) -> Result<u64, String> {
+) -> Result<(u64, u64), String> {
     let mut messages_verified: u64 = 0;
+    let mut mismatches: u64 = 0;
     let mut from_cursor: Option<String> = from_ts.map(|ts| ts.to_string());
     let to_cursor: Option<String> = to_ts.map(|ts| ts.to_string());
 
@@ -370,6 +383,7 @@ async fn verify_segment(
                 .map_err(|e| format!("Failed to serialize local edge: {}", e))?;
 
             if mt_json != local_json {
+                mismatches += 1;
                 logger.error(format!(
                     "Process '{}': Message JSON differs at position {} (cursor mt='{}' local='{}'): {} vs {} bytes",
                     process_id,
@@ -402,5 +416,5 @@ async fn verify_segment(
         from_cursor = Some(mt_edges.last().unwrap().cursor.clone());
     }
 
-    Ok(messages_verified)
+    Ok((messages_verified, mismatches))
 }
