@@ -67,6 +67,7 @@ pub struct AoConfig {
     pub multi_tenant_base_read_conn: String,
     pub multi_tenant_base_data_dir: String,
     pub url: String,
+    pub local_store_sort_order: String,
 }
 
 fn get_db_dirs() -> (String, String, String, String) {
@@ -286,6 +287,11 @@ impl AoConfig {
             Err(_e) => "".to_string(),
         };
 
+        let local_store_sort_order: String = match env::var("LOCAL_STORE_SORT_ORDER") {
+            Ok(val) => val,
+            Err(_e) => "nonce".to_string(),
+        };
+
         Ok(AoConfig {
             database_url: env::var("DATABASE_URL")?,
             database_read_url,
@@ -329,6 +335,7 @@ impl AoConfig {
             multi_tenant_base_read_conn,
             multi_tenant_base_data_dir,
             url,
+            local_store_sort_order,
         })
     }
 }

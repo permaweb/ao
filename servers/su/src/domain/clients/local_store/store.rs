@@ -4,6 +4,7 @@ use async_trait::async_trait;
 use rocksdb::{Options, DB};
 use tokio::time::{sleep, Duration};
 
+use super::super::super::config::AoConfig;
 use super::super::super::core::dal::{
     DataStore, Log, Message, PaginatedMessages, Process, StoreErrorType,
 };
@@ -23,6 +24,13 @@ pub struct LocalStoreClient {
       and Messages, only public for migration purposes
     */
     pub index_db: DB,
+    /*
+      Controls how messages are sorted after retrieval from
+      the ordering index. "nonce" (default) trusts the key
+      order as-is. "timestamp" re-sorts results by the
+      timestamp field to match legacy ordering behavior.
+    */
+    sort_order: String,
 }
 
 impl From<rocksdb::Error> for StoreErrorType {
@@ -34,6 +42,9 @@ impl From<rocksdb::Error> for StoreErrorType {
 impl LocalStoreClient {
     pub fn new(file_db_dir: &String, index_db_dir: &String) -> Result<Self, StoreErrorType> {
         let logger = SuLog::init();
+
+        let config = AoConfig::new(Some("su".to_string()))
+            .map_err(|e| StoreErrorType::DatabaseError(format!("Failed to read config: {:?}", e)))?;
 
         let mut opts = Options::default();
         opts.create_if_missing(true);
@@ -63,6 +74,7 @@ impl LocalStoreClient {
             _logger: logger,
             file_db,
             index_db,
+            sort_order: config.local_store_sort_order,
         })
     }
 
@@ -71,6 +83,9 @@ impl LocalStoreClient {
         index_db_dir: &String,
     ) -> Result<Self, StoreErrorType> {
         let logger = SuLog::init();
+
+        let config = AoConfig::new(Some("su".to_string()))
+            .map_err(|e| StoreErrorType::DatabaseError(format!("Failed to read config: {:?}", e)))?;
 
         let mut opts = Options::default();
         opts.create_if_missing(true);
@@ -101,6 +116,7 @@ impl LocalStoreClient {
             _logger: logger,
             file_db,
             index_db,
+            sort_order: config.local_store_sort_order,
         })
     }
 
@@ -289,6 +305,89 @@ impl LocalStoreClient {
             };
         }
 
+        if self.sort_order == "timestamp" && has_next_page {
+            /*
+              Lookahead: scan up to 1000 more keys beyond the limit
+              looking for messages with timestamps that belong in this
+              page (less than or equal to the max timestamp we collected).
+              This catches misordered messages that crossed the page boundary
+              due to nonce-based key ordering.
+            */
+            let max_ts = paginated_keys.iter()
+                .filter_map(|(k, _)| k.split(':').nth(4)?.parse::<i64>().ok())
+                .max()
+                .unwrap_or(i64::MAX);
+
+            let mut lookahead_count = 0;
+            let cf = self.index_db.cf_handle("message_ordering").ok_or_else(|| {
+                StoreErrorType::DatabaseError("Column family 'message_ordering' not found".to_string())
+            })?;
+
+            let last_key = &paginated_keys.last().unwrap().0;
+            let iter = self.index_db.prefix_iterator_cf(cf, last_key.as_bytes());
+            let mut skipped_first = false;
+
+            for item in iter {
+                let (key, assignment_id_bytes) = item?;
+                let key_str = String::from_utf8(key.to_vec())?;
+
+                if !skipped_first {
+                    skipped_first = true;
+                    continue;
+                }
+
+                let parts: Vec<&str> = key_str.split(':').collect();
+                if parts.len() < 5 {
+                    continue;
+                }
+
+                let timestamp = parts[4].parse::<i64>().unwrap_or(0);
+
+                if let Some(ref to_str) = to {
+                    if let Ok(to_timestamp) = to_str.parse::<i64>() {
+                        if timestamp > to_timestamp {
+                            lookahead_count += 1;
+                            if lookahead_count >= 1000 {
+                                break;
+                            }
+                            continue;
+                        }
+                    }
+                }
+
+                if timestamp <= max_ts {
+                    let assignment_id = String::from_utf8(assignment_id_bytes.to_vec())?;
+                    paginated_keys.push((key_str, assignment_id));
+                }
+
+                lookahead_count += 1;
+                if lookahead_count >= 1000 {
+                    break;
+                }
+            }
+
+            paginated_keys.sort_by(|(key_a, _), (key_b, _)| {
+                let ts_a = key_a.split(':').nth(4)
+                    .and_then(|s| s.parse::<i64>().ok())
+                    .unwrap_or(0);
+                let ts_b = key_b.split(':').nth(4)
+                    .and_then(|s| s.parse::<i64>().ok())
+                    .unwrap_or(0);
+                ts_a.cmp(&ts_b)
+            });
+
+            /*
+              Truncate back to the limit since lookahead may
+              have added extra entries
+            */
+            if let Some(actual_limit) = limit {
+                if paginated_keys.len() > *actual_limit {
+                    paginated_keys.truncate(*actual_limit);
+                    has_next_page = true;
+                }
+            }
+        }
+
         Ok((paginated_keys, has_next_page))
     }
 
@@ -363,6 +462,89 @@ impl LocalStoreClient {
                 }
                 _ => (),
             };
+        }
+
+        if self.sort_order == "timestamp" && has_next_page {
+            /*
+              Lookahead: scan up to 1000 more keys beyond the limit
+              looking for messages with timestamps that belong in this
+              page. This catches misordered messages that crossed the
+              page boundary due to nonce-based key ordering.
+            */
+            let max_ts = paginated_keys.iter()
+                .filter_map(|(k, _)| k.split(':').nth(4)?.parse::<i64>().ok())
+                .max()
+                .unwrap_or(i64::MAX);
+
+            let mut lookahead_count = 0;
+            let cf = self.index_db.cf_handle("message_ordering").ok_or_else(|| {
+                StoreErrorType::DatabaseError("Column family 'message_ordering' not found".to_string())
+            })?;
+
+            let last_key = &paginated_keys.last().unwrap().0;
+            let iter = self.index_db.prefix_iterator_cf(cf, last_key.as_bytes());
+            let mut skipped_first = false;
+
+            for item in iter {
+                let (key, assignment_id_bytes) = item?;
+                let key_str = String::from_utf8(key.to_vec())?;
+
+                if !skipped_first {
+                    skipped_first = true;
+                    continue;
+                }
+
+                let parts: Vec<&str> = key_str.split(':').collect();
+                if parts.len() < 5 {
+                    continue;
+                }
+
+                let timestamp = parts[4].parse::<i64>().unwrap_or(0);
+
+                if let Some(ref to_str) = to_nonce {
+                    if let Ok(to_nonce_s) = to_str.parse::<i32>() {
+                        let nonce = parts[3].parse::<i32>().unwrap_or(0);
+                        if nonce > to_nonce_s {
+                            lookahead_count += 1;
+                            if lookahead_count >= 1000 {
+                                break;
+                            }
+                            continue;
+                        }
+                    }
+                }
+
+                if timestamp <= max_ts {
+                    let assignment_id = String::from_utf8(assignment_id_bytes.to_vec())?;
+                    paginated_keys.push((key_str, assignment_id));
+                }
+
+                lookahead_count += 1;
+                if lookahead_count >= 1000 {
+                    break;
+                }
+            }
+
+            paginated_keys.sort_by(|(key_a, _), (key_b, _)| {
+                let ts_a = key_a.split(':').nth(4)
+                    .and_then(|s| s.parse::<i64>().ok())
+                    .unwrap_or(0);
+                let ts_b = key_b.split(':').nth(4)
+                    .and_then(|s| s.parse::<i64>().ok())
+                    .unwrap_or(0);
+                ts_a.cmp(&ts_b)
+            });
+
+            /*
+              Truncate back to the limit since lookahead may
+              have added extra entries
+            */
+            if let Some(actual_limit) = limit {
+                if paginated_keys.len() > *actual_limit {
+                    paginated_keys.truncate(*actual_limit);
+                    has_next_page = true;
+                }
+            }
         }
 
         Ok((paginated_keys, has_next_page))
