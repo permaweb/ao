@@ -52,9 +52,15 @@ FILE* fopen(const char* filename, const char* mode) {
 }
 
 size_t fread(void* ptr, size_t size, size_t nmemb, FILE* stream) {
+    AO_LOG( "AO: fread called\n");
     int fd = fileno(stream);
-    weavedrive_read(fd, ptr, size * nmemb);
-    return nmemb;
+    int bytes_read = weavedrive_read(fd, ptr, size * nmemb);
+    AO_LOG( "AO: weavedrive_read returned %d bytes\n", bytes_read);
+    if ((bytes_read % size) != 0) {
+        // TODO: Handle this case?
+        AO_LOG( "AO: fread: bytes_read is not a multiple of size\n");
+    }
+    return bytes_read / size;
 }
 
 int fclose(FILE* stream) {
