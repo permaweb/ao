@@ -1,0 +1,154 @@
+name: Auto Version, Tag, and Publish to NPM
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      update_type:
+        description: Version update type
+        required: true
+        default: patch
+        type: choice
+        options:
+          - major
+          - minor
+          - patch
+
+concurrency:
+  group: npm-release
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    if: "${{ github.event_name == 'workflow_dispatch' || !startsWith(github.event.head_commit.message, 'chore: release ') }}"
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+      pull-requests: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.DEPLOY_PAT || github.token }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22.14.0'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Install npm with OIDC support
+        run: npm install --global npm@^11.5.1
+
+      - name: Get version update type
+        id: release-type
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const updateTypes = ['major', 'minor', 'patch'];
+
+            function selectedUpdateTypes(body) {
+              return updateTypes.filter((type) => {
+                const pattern = new RegExp(`^- \\[[xX]\\]\\s*${type}\\s*$`, 'im');
+                return pattern.test(body ?? '');
+              });
+            }
+
+            if (context.eventName === 'workflow_dispatch') {
+              const updateType = context.payload.inputs?.update_type;
+
+              if (!updateTypes.includes(updateType)) {
+                core.setFailed(`Invalid version update type: ${updateType}`);
+                return;
+              }
+
+              core.setOutput('update-type', updateType);
+              core.info(`Selected version update: ${updateType}`);
+              return;
+            }
+
+            const { owner, repo } = context.repo;
+            const response = await github.rest.repos.listPullRequestsAssociatedWithCommit({
+              owner,
+              repo,
+              commit_sha: context.sha,
+            });
+
+            const pullRequest =
+              response.data.find((pr) => pr.merged_at && pr.base.ref === 'main') ??
+              response.data.find((pr) => pr.merged_at);
+
+            if (!pullRequest) {
+              core.setFailed(`No merged pull request found for commit ${context.sha}.`);
+              return;
+            }
+
+            const selected = selectedUpdateTypes(pullRequest.body);
+
+            if (selected.length !== 1) {
+              core.setFailed(
+                `PR #${pullRequest.number} must have exactly one version update checkbox selected. Found ${selected.length}.`,
+              );
+              return;
+            }
+
+            core.setOutput('update-type', selected[0]);
+            core.setOutput('pr-number', String(pullRequest.number));
+            core.info(`Selected version update from PR #${pullRequest.number}: ${selected[0]}`);
+
+      - name: Bump package version
+        id: package-version
+        run: |
+          npm version "$UPDATE_TYPE" --no-git-tag-version
+          PACKAGE_NAME=$(node -p "require('./package.json').name")
+          VERSION=$(node -p "require('./package.json').version")
+          echo "package-name=$PACKAGE_NAME" >> "$GITHUB_OUTPUT"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Bumped $PACKAGE_NAME to $VERSION"
+        working-directory: ./connect
+        env:
+          UPDATE_TYPE: ${{ steps.release-type.outputs.update-type }}
+
+      - name: Check release availability
+        run: |
+          if git tag --list "v${PACKAGE_VERSION}" | grep -q .; then
+            echo "::error::Tag v${PACKAGE_VERSION} already exists"
+            exit 1
+          fi
+
+          if npm view "${PACKAGE_NAME}@${PACKAGE_VERSION}" version --registry=https://registry.npmjs.org > /dev/null 2>&1; then
+            echo "::error::${PACKAGE_NAME}@${PACKAGE_VERSION} already exists on npm"
+            exit 1
+          fi
+        env:
+          PACKAGE_NAME: ${{ steps.package-version.outputs.package-name }}
+          PACKAGE_VERSION: ${{ steps.package-version.outputs.version }}
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: ./connect
+
+      - name: Build package
+        run: npm run build
+        working-directory: ./connect
+
+      - name: Commit version bump and tag
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add connect/package.json connect/package-lock.json
+          git commit -m "chore: release v${PACKAGE_VERSION} [skip ci]"
+          git tag "v${PACKAGE_VERSION}"
+          git push origin HEAD:main
+          git push origin "v${PACKAGE_VERSION}"
+        env:
+          PACKAGE_VERSION: ${{ steps.package-version.outputs.version }}
+
+      - name: Publish to NPM
+        run: npm publish
+        working-directory: ./connect
