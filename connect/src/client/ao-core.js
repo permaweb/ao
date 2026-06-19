@@ -7,7 +7,7 @@ function normalizeOutput(jsonRes) {
   try {
     body = typeof jsonRes === 'string'
       ? JSON.parse(jsonRes?.results?.json?.body)
-      : jsonRes?.results?.raw ?? {};
+      : jsonRes?.raw ?? {};
   } catch {}
 
   debugLog('info', 'Parsed HyperBEAM Response Body:', body);
@@ -166,7 +166,7 @@ export function resultWith(deps) {
   return async (args) => {
     try {
       const params = {
-        path: `/${args.process}~process@1.0/compute=${args.slot ?? args.message}`,
+        path: `/${args.process}~process@1.0/compute/results=${args.slot ?? args.message}`,
         target: args.process,
         data: getData(args),
         ...getTags(args),
@@ -198,7 +198,7 @@ export function resultsWith(deps) {
           const currentSlot = await slotResponse.text();
 
           const resultsParams = {
-            path: `/${args.process}/compute=${currentSlot}`,
+            path: `/${args.process}/compute/results=${currentSlot}`,
             ...jsonParams
           }
 
