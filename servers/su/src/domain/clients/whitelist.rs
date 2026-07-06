@@ -29,6 +29,8 @@ pub struct DbEntry {
 pub struct ProcessEntry {
     pub su: String,
     pub db_name: String,
+    #[serde(default)]
+    pub read_only: Option<bool>,
 }
 
 pub struct FileUrlWhitelist {
@@ -108,6 +110,14 @@ impl ProcessWhitelist for FileUrlWhitelist {
                 .map(|entry| entry.su == self.own_url)
                 .unwrap_or(false)
         }
+    }
+
+    fn is_process_read_only(&self, process_id: String) -> bool {
+        let whitelist = self.whitelist.read().unwrap();
+        whitelist.processes
+            .get(&process_id)
+            .and_then(|entry| entry.read_only)
+            .unwrap_or(false)
     }
 
     fn su_db_names(&self) -> Vec<String> {

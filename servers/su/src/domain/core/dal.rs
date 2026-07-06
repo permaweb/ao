@@ -273,6 +273,7 @@ pub enum ExtRouterErrorType {
 #[async_trait]
 pub trait ProcessWhitelist: Send + Sync {
     fn is_process_allowed(&self, process_id: String) -> bool;
+    fn is_process_read_only(&self, process_id: String) -> bool;
     fn su_db_names(&self) -> Vec<String>;
     fn su_efs_names(&self) -> HashMap<String, String>;
     fn process_db_names(&self) -> HashMap<String, String>;

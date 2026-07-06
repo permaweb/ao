@@ -328,6 +328,9 @@ pub async fn write_item(
         if !whitelist.is_process_allowed(target_id.clone()) {
             return Err(format!("Process {} is not allowed on this SU", target_id));
         }
+        if whitelist.is_process_read_only(target_id.clone()) {
+            return Err(format!("Process {} is read_only on this SU", target_id));
+        }
     }
 
     deps.logger.log(format!(
