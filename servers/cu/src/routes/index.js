@@ -7,10 +7,12 @@ import { withResultsRoutes } from './results.js'
 import { withCronRoutes } from './cron.js'
 import { withHealthcheckRoutes } from './healthcheck.js'
 import { withMetricRoutes } from './metrics.js'
+import { withStopRoutes } from './stop.js'
 
 export const withRoutes = pipe(
   withHealthcheckRoutes,
   withStateRoutes,
+  withStopRoutes,
   withResultRoutes,
   withDryRunRoutes,
   withResultsRoutes,

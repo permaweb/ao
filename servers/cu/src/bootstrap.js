@@ -25,6 +25,7 @@ import * as MetricsClient from './effects/metrics.js'
 
 import { readResultWith } from './domain/api/readResult.js'
 import { readStateWith, pendingReadStates } from './domain/api/readState.js'
+import { stopReadStateWith } from './domain/api/stopReadState.js'
 import { readStateFromCheckpointWith } from './domain/api/readStateFromCheckpoint.js'
 import { readCronResultsWith } from './domain/api/readCronResults.js'
 import { healthcheckWith } from './domain/api/healthcheck.js'
@@ -482,6 +483,7 @@ export const createApis = async (ctx) => {
    */
   const readStateLogger = ctx.logger.child('readState')
   const readState = readStateWith(sharedDeps(readStateLogger))
+  const stopReadState = stopReadStateWith({ logger: readStateLogger.child('stopReadState') })
 
   const dryRunLogger = ctx.logger.child('dryRun')
   const dryRun = dryRunWith({
@@ -564,5 +566,5 @@ export const createApis = async (ctx) => {
 
   const healthcheck = healthcheckWith({ walletAddress: address })
 
-  return { metrics, stats, pendingReadStates, readState, readStateFromCheckpoint, dryRun, readResult, readResults, readCronResults, healthcheck }
+  return { metrics, stats, pendingReadStates, stopReadState, readState, readStateFromCheckpoint, dryRun, readResult, readResults, readCronResults, healthcheck }
 }

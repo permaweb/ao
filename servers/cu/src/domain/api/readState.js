@@ -18,6 +18,56 @@ import { loadProcessMetaWith } from '../lib/loadProcessMeta.js'
  * @type {Map<string, { startTime: Date, pending: Promise<any> }}
  */
 export const pendingReadState = new Map()
+const stoppedReadStateError = ({ processId, key }) => {
+  const err = new Error(`Pending readState for process "${processId}" stopped`)
+  err.name = 'ReadStateStopped'
+  err.status = 409
+  err.processId = processId
+  err.pendingKey = key
+  return err
+}
+
+export const createReadStateStopSignal = ({ processId, key }) => {
+  let stoppedAt
+  let stoppedReason
+  let rejectStopped
+  const stopped = new Promise((resolve, reject) => {
+    rejectStopped = reject
+  })
+
+  return {
+    stopped,
+    stop: () => {
+      if (stoppedAt) return false
+      stoppedAt = new Date()
+      stoppedReason = stoppedReadStateError({ processId, key })
+      rejectStopped(stoppedReason)
+      return true
+    },
+    isStopped: () => Boolean(stoppedAt),
+    reason: () => stoppedReason || stoppedReadStateError({ processId, key })
+  }
+}
+
+export const stopPendingReadStatesForProcess = ({ processId }) => {
+  const stopped = []
+
+  for (const [key, entry] of pendingReadState.entries()) {
+    const [pendingProcessId] = split(',', key)
+    if (pendingProcessId !== processId) continue
+
+    if (typeof entry.stop === 'function') entry.stop()
+    pendingReadState.delete(key)
+    stopped.push(key)
+  }
+
+  return {
+    processId,
+    stopped,
+    count: stopped.length
+  }
+}
+
 const removePendingReadState = (key) => (res) => {
   pendingReadState.delete(key)
   return res
@@ -70,6 +120,11 @@ export function readStateWith (env) {
     }
 
     const key = join(',', [processId, to, ordinate, cron, needsOnlyMemory])
+    const stopSignal = createReadStateStopSignal({ processId, key })
+    const rejectIfStopped = (ctx) =>
+      stopSignal.isStopped()
+        ? Rejected(stopSignal.reason())
+        : Resolved(ctx)
 
     /**
      * The potential Promise that encapsulates the evaluation stream
@@ -92,9 +147,12 @@ export function readStateWith (env) {
        * there is only one instance of the work used to resolve each Async,
        * every time, thus preventing duplication of work
        */
-      pending = of({ id: processId, messageId, to, ordinate, cron, stats, needsOnlyMemory, key })
+      pending = of({ id: processId, messageId, to, ordinate, cron, stats, needsOnlyMemory, key, stopSignal })
+        .chain(rejectIfStopped)
         .chain(loadProcessMeta)
+        .chain(rejectIfStopped)
         .chain(loadProcess)
+        .chain(rejectIfStopped)
         .chain((ctx) => {
           startNonce = ctx.ordinate
 
@@ -109,9 +167,13 @@ export function readStateWith (env) {
           if (ctx.exact) return Resolved({ ...ctx, result: ctx.result, output: ctx.result })
 
           return of(ctx)
+            .chain(rejectIfStopped)
             .chain(loadModule)
+            .chain(rejectIfStopped)
             .chain(loadMessages)
+            .chain(rejectIfStopped)
             .chain(hydrateMessages)
+            .chain(rejectIfStopped)
             .chain(evaluate)
             .chain((ctx) => Resolved({
               ...ctx,
@@ -145,9 +207,11 @@ export function readStateWith (env) {
           startTime: res.startTime,
           currentNonce: startNonce,
           chainedTo: res.chainedTo,
-          pending: res.pending
-            .then(next)
-            .finally(removePendingReadState(key))
+          stop: stopSignal.stop,
+          pending: Promise.race([
+            res.pending.then(next),
+            stopSignal.stopped
+          ]).finally(removePendingReadState(key))
         }
         pendingReadState.set(key, newEntry)
 

@@ -113,6 +113,19 @@ export function evaluateWith (env) {
           noSave: always(true)
         })(ctx)
 
+        let hasEvaluated = false
+        const stopIfReadStateStopped = async () => {
+          if (!ctx.stopSignal?.isStopped?.()) return
+
+          if (hasEvaluated && ctx.evaluator) {
+            await ctx.evaluator({ close: true }).catch((err) => {
+              logger('Failed to close stopped readState evaluator stream for process "%s": %j', ctx.id, err)
+            })
+          }
+
+          throw ctx.stopSignal.reason()
+        }
+
         const evalStream = async function (messages) {
           /**
            * There seems to be duplicate Cron Message evaluations occurring and it's been difficult
@@ -143,6 +156,8 @@ export function evaluateWith (env) {
            */
           let first = true
           for await (const { noSave, cron, ordinate, name, message, deepHash, isAssignment, assignmentId, AoGlobal } of messages) {
+            await stopIfReadStateStopped()
+
             if (cron) {
               const key = toEvaledCron({ timestamp: message.Timestamp, cron })
               if (evaledCrons.has(key)) continue
@@ -201,7 +216,10 @@ export function evaluateWith (env) {
                   /**
                    * Where the actual evaluation is performed
                    */
-                  .then((Memory) => ctx.evaluator({ first, noSave, name, deepHash, cron, ordinate, isAssignment, processId: ctx.id, Memory, message, AoGlobal }))
+                  .then((Memory) => {
+                    hasEvaluated = true
+                    return ctx.evaluator({ first, noSave, name, deepHash, cron, ordinate, isAssignment, processId: ctx.id, Memory, message, AoGlobal })
+                  })
                   /**
                    * These values are folded,
                    * so that we can potentially update the process memory cache
@@ -257,6 +275,7 @@ export function evaluateWith (env) {
                     return output
                   })
               )
+            await stopIfReadStateStopped()
           }
         }
 
@@ -309,7 +328,11 @@ export function evaluateWith (env) {
         await Promise.race([
           pipeline(streams[streams.length - 1], evalStream).then(pResolve),
           bailout
-        ])
+        ]).catch((err) => {
+          if (ctx.stopSignal?.isStopped?.()) throw ctx.stopSignal.reason()
+          throw err
+        })
+        await stopIfReadStateStopped()
 
         /**
          * Make sure to attempt to cache the last result

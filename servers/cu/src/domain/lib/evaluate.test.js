@@ -150,6 +150,104 @@ describe('evaluate', () => {
     assert.ok(last.ordinate)
   })
 
+  test('stops readState streams between messages', async () => {
+    let stopped = false
+    let evalCount = 0
+    let closeCount = 0
+    let saveCount = 0
+    const stopErr = new Error('readState stopped')
+    stopErr.status = 409
+
+    const evaluate = evaluateWith({
+      findMessageBefore: async () => { throw { status: 404 } },
+      loadEvaluator: () => ({ close }) => {
+        if (close) {
+          closeCount++
+          return
+        }
+
+        evalCount++
+        stopped = true
+        return { Memory: Buffer.from('Hello world') }
+      },
+      saveLatestProcessMemory: async () => { saveCount++ },
+      evaluationCounter: mockCounter,
+      gasCounter: mockCounter,
+      logger
+    })
+
+    await assert.rejects(
+      evaluate({
+        id: 'ctr-1234',
+        from: new Date().getTime(),
+        moduleId: 'foo-module',
+        moduleOptions,
+        stopSignal: {
+          isStopped: () => stopped,
+          reason: () => stopErr
+        },
+        stats: {
+          startTime: new Date(),
+          messages: {
+            scheduled: 0,
+            cron: 0,
+            error: 0
+          }
+        },
+        result: {
+          Memory: null
+        },
+        messages: toReadable([
+          {
+            ordinate: 1,
+            isAssignment: false,
+            message: {
+              Id: 'message-123',
+              Timestamp: 1702846520559,
+              Owner: 'owner-123',
+              Tags: [
+                { name: 'function', value: 'hello' }
+              ],
+              'Block-Height': 1234
+            },
+            AoGlobal: {
+              Process: {
+                Id: '1234',
+                Tags: []
+              }
+            }
+          },
+          {
+            ordinate: 2,
+            isAssignment: false,
+            message: {
+              Id: 'message-456',
+              Timestamp: 1702846520560,
+              Owner: 'owner-123',
+              Tags: [
+                { name: 'function', value: 'world' }
+              ],
+              'Block-Height': 1235
+            },
+            AoGlobal: {
+              Process: {
+                Id: '1234',
+                Tags: []
+              }
+            }
+          }
+        ])
+      }).toPromise(),
+      (err) => {
+        assert.equal(err, stopErr)
+        return true
+      }
+    )
+    assert.equal(evalCount, 1)
+    assert.equal(closeCount, 1)
+    assert.equal(saveCount, 0)
+  })
+
   test('skip over duplicate messages (dup assignment or dup push (deepHash))', async () => {
     let evalCount = 0
     let messageCount = 0
