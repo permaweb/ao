@@ -171,6 +171,48 @@ const processId = await spawn({
 });
 ```
 
+In `mainnet` mode, `spawn` can create a process backed directly by HyperBEAM's
+Lua 5.3 device. Pass either a Lua module transaction ID as `module`, or inline
+Lua source as `data`. Inline source is automatically tagged with
+`content-type: application/lua`. All process and message tag names are
+lowercased for Lua device traffic; their values are unchanged.
+
+```js
+import { connect, createSigner } from "@permaweb/aoconnect";
+
+const lua = `
+function compute(process, message, opts)
+  process.results = {
+    output = { body = "Hello from Lua" }
+  }
+  return process
+end
+`;
+
+const { spawn, message } = connect({
+  MODE: "mainnet",
+  URL: "https://your-hyperbeam-node.example",
+  signer: createSigner(wallet),
+});
+
+const processId = await spawn({
+  executionDevice: "lua@5.3",
+  data: lua,
+  tags: [{ name: "Name", value: "My Lua Process" }],
+});
+
+await message({
+  process: processId,
+  tags: [{ name: "Action", value: "Ping" }],
+});
+```
+
+`lua@5.3` is normalized to HyperBEAM's current wire identifier,
+`lua@5.3a`. To use code already available to the HyperBEAM node, replace
+`data: lua` with `module: "LUA_MODULE_TRANSACTION_ID"`. A connection remembers
+the Lua processes it spawns. When sending through a newly created connection,
+pass `executionDevice: "lua@5.3"` to `message` so its tags are also lowercased.
+
 #### `connect`
 
 If you would like the connect to use ao components other than the defaults, you

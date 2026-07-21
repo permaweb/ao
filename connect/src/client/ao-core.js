@@ -3,21 +3,24 @@ import { debugLog } from '../logger.js'
 function normalizeOutput(jsonRes) {
   debugLog('info', 'HyperBEAM Response Body Raw:', jsonRes);
 
-  let body = {};
+  let body = jsonRes ?? {};
   try {
-    body = typeof jsonRes === 'string'
-      ? JSON.parse(jsonRes?.results?.json?.body)
-      : jsonRes?.raw ?? {};
+    if (typeof body === 'string') body = JSON.parse(body)
+
+    const legacyJsonBody = body?.results?.json?.body
+    body = typeof legacyJsonBody === 'string'
+      ? JSON.parse(legacyJsonBody)
+      : body?.raw ?? body?.results?.raw ?? body
   } catch {}
 
   debugLog('info', 'Parsed HyperBEAM Response Body:', body);
 
   return {
-    Output: body.Output ?? {},
-    Messages: body.Messages ?? [],
-    Assignments: body.Assignments ?? [],
-    Spawns: body.Spawns ?? [],
-    Error: body.Error,
+    Output: body.Output ?? body.output ?? {},
+    Messages: body.Messages ?? body.messages ?? [],
+    Assignments: body.Assignments ?? body.assignments ?? [],
+    Spawns: body.Spawns ?? body.spawns ?? [],
+    Error: body.Error ?? body.error,
     ...body,
   };
 }
@@ -29,18 +32,59 @@ const baseParams = {
 }
 
 const httpParams = { ...baseParams, 'accept-codec': 'httpsig@1.0' }
-const jsonParams = { ...baseParams, 'require-codec': 'application/json' }
+const jsonParams = {
+  ...baseParams,
+  accept: 'application/json',
+  'require-codec': 'application/json'
+}
 
-const getAOParams = (type) => ({
-  Type: type,
-  'Data-Protocol': 'ao',
-  Variant: 'ao.N.1'
-})
+const GENESIS_WASM_EXECUTION_DEVICE = 'genesis-wasm@1.0'
+const LUA_EXECUTION_DEVICE = 'lua@5.3a'
+const luaProcessesByConnection = new WeakMap()
 
-const getTags = (args) =>
+const isLuaExecutionDevice = (device) =>
+  ['lua@5.3', LUA_EXECUTION_DEVICE, 'hyper-aos'].includes(device)
+
+const findTag = (args, tagName) =>
+  args.tags?.find(({ name }) => name.toLowerCase() === tagName)?.value
+
+const getExecutionDevice = (args, taggedDevice) => {
+  const requestedDevice = args.executionDevice ?? args.type ?? taggedDevice
+
+  if (isLuaExecutionDevice(requestedDevice)) {
+    return LUA_EXECUTION_DEVICE
+  }
+
+  if (requestedDevice === 'genesis-wasm') return GENESIS_WASM_EXECUTION_DEVICE
+  return requestedDevice ?? GENESIS_WASM_EXECUTION_DEVICE
+}
+
+const getAOParams = (type, lowercase = false) => lowercase
+  ? {
+      type,
+      'data-protocol': 'ao',
+      variant: 'ao.N.1'
+    }
+  : {
+      Type: type,
+      'Data-Protocol': 'ao',
+      Variant: 'ao.N.1'
+    }
+
+const getTags = (args, lowercase = false) =>
   args.tags
-    ? Object.fromEntries(args.tags.map(tag => [tag.name, tag.value]))
+    ? Object.fromEntries(args.tags.map(tag => [lowercase ? tag.name.toLowerCase() : tag.name, tag.value]))
     : {}
+
+const rememberLuaProcess = (deps, processId) => {
+  const processIds = luaProcessesByConnection.get(deps) ?? new Set()
+  processIds.add(processId)
+  luaProcessesByConnection.set(deps, processIds)
+}
+
+const isLuaMessage = (deps, args) =>
+  isLuaExecutionDevice(args.executionDevice ?? findTag(args, 'execution-device')) ||
+  luaProcessesByConnection.get(deps)?.has(args.process) === true
 
 const getData = (args) => args.data ?? '1984'
 
@@ -75,6 +119,18 @@ export function requestWith(deps) {
   }
 }
 
+/**
+ * @typedef MainnetSpawnArgs
+ * @property {string} [module] - an Arweave transaction ID containing the process module
+ * @property {string | Uint8Array | ArrayBuffer} [data] - inline Lua source when using the Lua execution device
+ * @property {'genesis-wasm@1.0' | 'lua@5.3' | 'lua@5.3a'} [executionDevice]
+ * @property {'genesis-wasm' | 'hyper-aos'} [type] - deprecated execution device alias
+ * @property {string} [authority]
+ * @property {{ name: string, value: string }[]} [tags]
+ *
+ * @param {any} deps
+ * @returns {(args: MainnetSpawnArgs) => Promise<string>}
+ */
 export function spawnWith(deps) {
   return async (args) => {
     let scheduler = deps.scheduler
@@ -85,16 +141,37 @@ export function spawnWith(deps) {
     }
 
     const module = process.env.MODULE || args.module
+    const taggedExecutionDevice = findTag(args, 'execution-device')
+    const executionDevice = getExecutionDevice(args, taggedExecutionDevice)
+    const luaProcess = executionDevice === LUA_EXECUTION_DEVICE
+    const tags = getTags(args, luaProcess)
+    const inlineLua = executionDevice === LUA_EXECUTION_DEVICE && !module && args.data != null
 
     if (!scheduler) throw new Error('No scheduler provided')
-    if (!module) throw new Error('No module provided')
+    if (!module && !inlineLua) {
+      throw new Error(
+        executionDevice === LUA_EXECUTION_DEVICE
+          ? 'No module or inline Lua source provided'
+          : 'No module provided'
+      )
+    }
 
     const authority = process.env.AUTHORITY || args.authority || scheduler
+
+    for (const name of Object.keys(tags)) {
+      if (name.toLowerCase() === 'execution-device') delete tags[name]
+      if (inlineLua && name.toLowerCase() === 'content-type') delete tags[name]
+    }
+
+    if (inlineLua) {
+      tags[luaProcess ? 'content-type' : 'Content-Type'] = 'application/lua'
+    }
 
     debugLog('info', 'Node URL:', deps.url)
     debugLog('info', 'Scheduler:', scheduler)
     debugLog('info', 'Authority:', authority)
     debugLog('info', 'Module:', module)
+    debugLog('info', 'Execution Device:', executionDevice)
 
     try {
       const params = {
@@ -102,13 +179,13 @@ export function spawnWith(deps) {
         device: 'process@1.0',
         'scheduler-device': 'scheduler@1.0',
         'push-device': 'push@1.0',
-        'execution-device': 'genesis-wasm@1.0',
-        Authority: authority,
-        Scheduler: scheduler,
-        Module: module,
+        [luaProcess ? 'authority' : 'Authority']: authority,
+        [luaProcess ? 'scheduler' : 'Scheduler']: scheduler,
+        ...(module ? { [luaProcess ? 'module' : 'Module']: module } : {}),
         data: getData(args),
-        ...getTags(args),
-        ...getAOParams('Process'),
+        ...tags,
+        'execution-device': executionDevice,
+        ...getAOParams('Process', luaProcess),
         ...httpParams
       }
 
@@ -118,7 +195,10 @@ export function spawnWith(deps) {
         const processId = response.headers.get('process')
         debugLog('info', 'Process ID:', processId)
 
-        if (processId) return processId;
+        if (processId) {
+          if (luaProcess) rememberLuaProcess(deps, processId)
+          return processId
+        }
         else throw new Error('Error spawning process')
       } catch (e) {
         throw new Error(e.message ?? 'Error spawning process')
@@ -132,12 +212,13 @@ export function spawnWith(deps) {
 export function messageWith(deps) {
   return async (args) => {
     try {
+      const luaMessage = isLuaMessage(deps, args)
       const params = {
         path: `/${args.process}~process@1.0/push`,
         target: args.process,
         data: getData(args),
-        ...getTags(args),
-        ...getAOParams('Message'),
+        ...getTags(args, luaMessage),
+        ...getAOParams('Message', luaMessage),
         ...jsonParams,
       }
 
@@ -166,7 +247,7 @@ export function resultWith(deps) {
   return async (args) => {
     try {
       const params = {
-        path: `/${args.process}~process@1.0/compute/results=${args.slot ?? args.message}`,
+        path: `/${args.process}~process@1.0/compute=${args.slot ?? args.message}/results`,
         target: args.process,
         data: getData(args),
         ...getTags(args),
@@ -198,7 +279,7 @@ export function resultsWith(deps) {
           const currentSlot = await slotResponse.text();
 
           const resultsParams = {
-            path: `/${args.process}/compute/results=${currentSlot}`,
+            path: `/${args.process}/compute=${currentSlot}/results`,
             ...jsonParams
           }
 
