@@ -43,7 +43,7 @@ const LUA_EXECUTION_DEVICE = 'lua@5.3a'
 const luaProcessesByConnection = new WeakMap()
 
 const isLuaExecutionDevice = (device) =>
-  ['lua@5.3', LUA_EXECUTION_DEVICE, 'hyper-aos'].includes(device)
+  [LUA_EXECUTION_DEVICE, 'hyper-aos'].includes(device)
 
 const findTag = (args, tagName) =>
   args.tags?.find(({ name }) => name.toLowerCase() === tagName)?.value
@@ -123,7 +123,8 @@ export function requestWith(deps) {
  * @typedef MainnetSpawnArgs
  * @property {string} [module] - an Arweave transaction ID containing the process module
  * @property {string | Uint8Array | ArrayBuffer} [data] - inline Lua source when using the Lua execution device
- * @property {'genesis-wasm@1.0' | 'lua@5.3' | 'lua@5.3a'} [executionDevice]
+ * @property {string} [executionDevice]
+ * @property {string} [schedulerDevice]
  * @property {'genesis-wasm' | 'hyper-aos'} [type] - deprecated execution device alias
  * @property {string} [authority]
  * @property {{ name: string, value: string }[]} [tags]
@@ -142,24 +143,29 @@ export function spawnWith(deps) {
 
     const module = process.env.MODULE || args.module
     const taggedExecutionDevice = findTag(args, 'execution-device')
+    const taggedSchedulerDevice = findTag(args, 'scheduler-device')
     const executionDevice = getExecutionDevice(args, taggedExecutionDevice)
+    const schedulerDevice = args.schedulerDevice ?? taggedSchedulerDevice ?? 'scheduler@1.0'
     const luaProcess = executionDevice === LUA_EXECUTION_DEVICE
     const tags = getTags(args, luaProcess)
     const inlineLua = executionDevice === LUA_EXECUTION_DEVICE && !module && args.data != null
+    const moduleRequired = executionDevice === GENESIS_WASM_EXECUTION_DEVICE
 
     if (!scheduler) throw new Error('No scheduler provided')
-    if (!module && !inlineLua) {
+    if (!module && !inlineLua && moduleRequired) {
       throw new Error(
-        executionDevice === LUA_EXECUTION_DEVICE
-          ? 'No module or inline Lua source provided'
-          : 'No module provided'
+        'No module provided'
       )
+    }
+    if (executionDevice === LUA_EXECUTION_DEVICE && !module && !inlineLua) {
+      throw new Error('No module or inline Lua source provided')
     }
 
     const authority = process.env.AUTHORITY || args.authority || scheduler
 
     for (const name of Object.keys(tags)) {
       if (name.toLowerCase() === 'execution-device') delete tags[name]
+      if (name.toLowerCase() === 'scheduler-device') delete tags[name]
       if (inlineLua && name.toLowerCase() === 'content-type') delete tags[name]
     }
 
@@ -172,12 +178,13 @@ export function spawnWith(deps) {
     debugLog('info', 'Authority:', authority)
     debugLog('info', 'Module:', module)
     debugLog('info', 'Execution Device:', executionDevice)
+    debugLog('info', 'Scheduler Device:', schedulerDevice)
 
     try {
       const params = {
         path: '/push',
         device: 'process@1.0',
-        'scheduler-device': 'scheduler@1.0',
+        'scheduler-device': schedulerDevice,
         'push-device': 'push@1.0',
         [luaProcess ? 'authority' : 'Authority']: authority,
         [luaProcess ? 'scheduler' : 'Scheduler']: scheduler,

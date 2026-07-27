@@ -94,7 +94,7 @@ describe('ao-core spawn', () => {
     const { requests, spawn } = createSpawn()
 
     await spawn({
-      executionDevice: 'lua@5.3',
+      executionDevice: 'lua@5.3a',
       module: 'lua-module-123'
     })
 
@@ -119,6 +119,43 @@ describe('ao-core spawn', () => {
     assert.equal('Module' in requests[0], false)
   })
 
+  test('spawns a process for a custom execution device without a module', async () => {
+    const { requests, spawn } = createSpawn()
+
+    await spawn({
+      executionDevice: 'name-token@1.0',
+      tags: [{ name: 'Initial-Owner', value: 'owner-123' }]
+    })
+
+    assert.equal(requests[0]['execution-device'], 'name-token@1.0')
+    assert.equal(requests[0]['Initial-Owner'], 'owner-123')
+    assert.equal('Module' in requests[0], false)
+    assert.equal('module' in requests[0], false)
+  })
+
+  test('overrides the scheduler device', async () => {
+    const { requests, spawn } = createSpawn()
+
+    await spawn({
+      executionDevice: 'carrier@1.0',
+      schedulerDevice: 'arweave-scheduler@1.0'
+    })
+
+    assert.equal(requests[0]['scheduler-device'], 'arweave-scheduler@1.0')
+  })
+
+  test('accepts the scheduler device as a tag without duplicating it', async () => {
+    const { requests, spawn } = createSpawn()
+
+    await spawn({
+      executionDevice: 'carrier@1.0',
+      tags: [{ name: 'Scheduler-Device', value: 'arweave-scheduler@1.0' }]
+    })
+
+    assert.equal(requests[0]['scheduler-device'], 'arweave-scheduler@1.0')
+    assert.equal('Scheduler-Device' in requests[0], false)
+  })
+
   test('supports the hyper-aos type alias', async () => {
     const { requests, spawn } = createSpawn()
 
@@ -132,7 +169,7 @@ describe('ao-core spawn', () => {
 
     await spawn({
       data: 'function compute(process) return process end',
-      tags: [{ name: 'Execution-Device', value: 'lua@5.3' }]
+      tags: [{ name: 'Execution-Device', value: 'lua@5.3a' }]
     })
 
     assert.equal(requests[0]['execution-device'], 'lua@5.3a')
@@ -145,7 +182,7 @@ describe('ao-core spawn', () => {
     const message = messageWith(deps)
 
     await spawn({
-      executionDevice: 'lua@5.3',
+      executionDevice: 'lua@5.3a',
       data: 'function compute(process) return process end',
       tags: [{ name: 'Custom-Tag', value: 'spawn' }]
     })
@@ -187,7 +224,7 @@ describe('ao-core spawn', () => {
 
     await message({
       process: 'process-123',
-      executionDevice: 'lua@5.3',
+      executionDevice: 'lua@5.3a',
       tags: [{ name: 'Action', value: 'Ping' }]
     })
 
@@ -200,7 +237,7 @@ describe('ao-core spawn', () => {
     const { spawn } = createSpawn()
 
     await assert.rejects(
-      spawn({ executionDevice: 'lua@5.3' }),
+      spawn({ executionDevice: 'lua@5.3a' }),
       /No module or inline Lua source provided/
     )
   })

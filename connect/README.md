@@ -196,7 +196,7 @@ const { spawn, message } = connect({
 });
 
 const processId = await spawn({
-  executionDevice: "lua@5.3",
+  executionDevice: "lua@5.3a",
   data: lua,
   tags: [{ name: "Name", value: "My Lua Process" }],
 });
@@ -207,11 +207,22 @@ await message({
 });
 ```
 
-`lua@5.3` is normalized to HyperBEAM's current wire identifier,
-`lua@5.3a`. To use code already available to the HyperBEAM node, replace
-`data: lua` with `module: "LUA_MODULE_TRANSACTION_ID"`. A connection remembers
-the Lua processes it spawns. When sending through a newly created connection,
-pass `executionDevice: "lua@5.3"` to `message` so its tags are also lowercased.
+For process types that require a different scheduler implementation, pass
+`schedulerDevice`. It defaults to `scheduler@1.0` and can also be supplied as a
+`Scheduler-Device` tag:
+
+```js
+const processId = await spawn({
+  executionDevice: "carrier@1.0",
+  schedulerDevice: "arweave-scheduler@1.0",
+  tags: [{ name: "swap-device", value: "arweave-swap@1.0" }],
+});
+```
+
+To use code already available to the HyperBEAM node, replace `data: lua` with
+`module: "LUA_MODULE_TRANSACTION_ID"`. A connection remembers the Lua processes
+it spawns. When sending through a newly created connection, pass
+`executionDevice: "lua@5.3a"` to `message` so its tags are also lowercased.
 
 #### `connect`
 
