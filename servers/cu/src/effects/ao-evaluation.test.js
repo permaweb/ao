@@ -19,7 +19,7 @@ describe('ao-evaluation', () => {
           db: {
             engine: 'sqlite',
             query: async ({ parameters }) => {
-              assert.deepStrictEqual(parameters, ['process-123,1702677252111,1'])
+              assert.deepStrictEqual(parameters, ['process-123,', 'process-123,􏿿', 'message-123'])
 
               return [{
                 id: 'process-123,1702677252111,1',
@@ -42,9 +42,7 @@ describe('ao-evaluation', () => {
 
       const res = await findEvaluation({
         processId: 'process-123',
-        to: 1702677252111,
-        ordinate: '1',
-        cron: undefined
+        messageId: 'message-123'
       })
 
       assert.deepStrictEqual(res, {
@@ -75,9 +73,7 @@ describe('ao-evaluation', () => {
 
       const res = await findEvaluation({
         processId: 'process-123',
-        to: 1702677252111,
-        ordinate: '1',
-        cron: undefined
+        messageId: 'message-123'
       })
         .catch(err => {
           assert.equal(err.status, 404)
