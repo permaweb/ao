@@ -9,6 +9,18 @@ const inputSchema = z.object({
   to: z.coerce.number().optional()
 })
 
+export const STATE_BUSY = Symbol('state-busy')
+
+export function sendStateResponse (res, input, output) {
+  if (output === STATE_BUSY) {
+    return res
+      .status(202)
+      .send({ message: `Evaluation of process "${input.processId}" to "${input.to || 'latest'}" is in progress.` })
+  }
+
+  return res.send(Buffer.from(arrayBufferFromMaybeView(output)))
+}
+
 export const withStateRoutes = (app) => {
   // readState
   app.get(
@@ -55,11 +67,8 @@ export const withStateRoutes = (app) => {
               return output.Memory
             })
             .toPromise(),
-          () => {
-            res.status(202)
-            return { message: `Evaluation of process "${input.processId}" to "${input.to || 'latest'}" is in progress.` }
-          }
-        ).then((output) => res.send(Buffer.from(arrayBufferFromMaybeView(output))))
+          () => STATE_BUSY
+        ).then((output) => sendStateResponse(res, input, output))
       })
     )()
   )
