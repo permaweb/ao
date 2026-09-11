@@ -58,7 +58,7 @@ import { locate } from "@permaweb/ao-scheduler-utils";
 let { url, address } = await locate('<process-id>', 'scheduler-owner-id');
 ```
 
-This will skip querying the gateway for the process, in order to obtain it's `Scheduler` tag, and instead will directly query for the `Scheduler-Location` record.
+This will skip querying the gateway for the process, in order to obtain its `Scheduler` tag, and instead will directly query for the `Scheduler-Location` record.
 
 > This is useful when a process has just been spawned, so might not be indexed by the gateway yet.
 
@@ -86,7 +86,7 @@ const { url } = raw('<wallet-address>')
 #### Internal Cache
 
 The library maintains an internal in-memory LRU cache of `Scheduler-Location` `Url`s, caching each for their
-specified `Time-To-Live`. If a `Scheduler-Location` exists in the cache, it's value will be returned, instead
+specified `Time-To-Live`. If a `Scheduler-Location` exists in the cache, its value will be returned, instead
 of fetching the record on chain.
 
 The default size of the cache is `100`. If you'd like a smaller or larger cache, you can set the size using `connect`
@@ -94,7 +94,7 @@ The default size of the cache is `100`. If you'd like a smaller or larger cache,
 #### `connect`
 
 If you would like to use config other than the defaults, you can
-specify those coonfigurations by providing their values `connect`. You can currently specify
+specify those configurations by providing their values `connect`. You can currently specify
 
 - The `GRAPHQL_URL`
 - The In-Memory `cacheSize`
@@ -136,9 +136,9 @@ connect() == { validate, locate, raw }
 
 This module's APIs will reject with certain `Error`s for certain sad-paths:
 
-- `TransactionNotFoundError` - the transaction id provided can not be found on the gateway. It's `name` property will be `TransactionNotFound`
-- `SchedulerTagNotFoundError` - a `Scheduler` tag was not found on the provided process transaction id. It's `name` property will be `SchedulerTagNotFound`
-- `InvalidSchedulerLocationError` - the `Scheduler-Location` record retrieved does not adhere to the `ao` `Scheduler-Location` specification. It's `name` property will be `InvalidSchedulerLocation`:
+- `TransactionNotFoundError` - the transaction id provided can not be found on the gateway. Its `name` property will be `TransactionNotFound`
+- `SchedulerTagNotFoundError` - a `Scheduler` tag was not found on the provided process transaction id. Its `name` property will be `SchedulerTagNotFound`
+- `InvalidSchedulerLocationError` - the `Scheduler-Location` record retrieved does not adhere to the `ao` `Scheduler-Location` specification. Its `name` property will be `InvalidSchedulerLocation`:
   - It does not have a `Url` tag
   - It does not have a `Time-To-Live` tag
  
