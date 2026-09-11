@@ -70,7 +70,7 @@ def main():
     
     # Inject c files into c_program if language is c
     if(language == 'c'):
-        c_program = inject_c_files(definition, c_program, c_source_files)
+        c_program = inject_c_files(definition, c_program, c_source_files, link_libraries)
     
     # Inject rust files into c_program if language is rust
     if(language == 'rust'):
