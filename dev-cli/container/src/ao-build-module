@@ -37,7 +37,7 @@ def determine_language():
     #     raise Exception('Multiple languages detected in the module')
     if len(langs) == 0:
         raise Exception('No language detected in the module')
-    
+
     if langs.count('lua') == 0 and langs.count('c') >= 1:
         lang = 'c'
     elif langs.count('lua') == 0 and langs.count('rust') >= 1:
@@ -51,7 +51,7 @@ def determine_language():
 def main():
     # Load the definition file
     definition = Definition('/opt/definition.yml')
-    
+
     # Load the config file
     config = Config('/src/config.yml')
 
@@ -67,26 +67,26 @@ def main():
     c_source_files = []
     injected_lua_files = []
     dependency_libraries = []
-    
+
     # Inject c files into c_program if language is c
     if(language == 'c'):
-        c_program = inject_c_files(definition, c_program, c_source_files)
-    
+        c_program = inject_c_files(definition, c_program, c_source_files, link_libraries)
+
     # Inject rust files into c_program if language is rust
     if(language == 'rust'):
-        c_program = inject_rust_files(definition, c_program)
+        c_program = inject_rust_files(definition, c_program, config)
 
     # Inject lua files into c_program always to load lua files and replace placeholders
     if(language == 'lua'):
         c_program = inject_lua_files(definition, c_program, injected_lua_files)
-    
+
     # Load all libraries
     c_program = load_libraries(config, definition, c_program, link_libraries, c_source_files, injected_lua_files,dependency_libraries)
-                    
+
     # Inject the lua files into the c program
     c_program = c_program.replace(
         '__INJECT_LUA_FILES__', '\n'.join(injected_lua_files))
-    
+
     #Generate compile target file
     debug_print('Start to generate complie.c')
 
@@ -97,25 +97,25 @@ def main():
     debug_print('Start to compile as WASM')
 
     # Setup the compile command
-    cmd = ['emcc', '-O3', 
+    cmd = ['emcc', '-O3',
       '-g2',
     #   '-s', 'MAIN_MODULE', # This is required to load dynamic libraries at runtime
       '-s', 'ASYNCIFY=1',
       '-s', 'STACK_SIZE=' + str(config.stack_size),
       '-s', 'ASYNCIFY_STACK_SIZE=' + str(config.stack_size),
-      '-s', 'ALLOW_MEMORY_GROWTH=1', 
-      '-s', 'INITIAL_MEMORY=' + str(config.initial_memory), 
-      '-s', 'MAXIMUM_MEMORY=' + str(config.maximum_memory), 
-      '-s', 'WASM=1', 
+      '-s', 'ALLOW_MEMORY_GROWTH=1',
+      '-s', 'INITIAL_MEMORY=' + str(config.initial_memory),
+      '-s', 'MAXIMUM_MEMORY=' + str(config.maximum_memory),
+      '-s', 'WASM=1',
       '-s', 'MODULARIZE',
-      # '-s', 'FILESYSTEM=0', 
-      '-s', 'DETERMINISTIC=1', 
-      '-s', 'NODERAWFS=0', 
+      # '-s', 'FILESYSTEM=0',
+      '-s', 'DETERMINISTIC=1',
+      '-s', 'NODERAWFS=0',
       '-s', 'FORCE_FILESYSTEM=1',
       '-msimd128',
       '--pre-js', '/opt/pre.js'
     ]
-    
+
     # If the target is 64 bit, add the MEMORY64 flag and link against 64 bit libraries
     if config.target == 64:
         cmd.extend(['-sMEMORY64=1'])
@@ -128,7 +128,7 @@ def main():
 
     # Link Rust library
     if(language == 'rust'):
-        cmd.extend(['-L/opt/aorustlib', '-l:libaorust.a'])
+        cmd.extend(['-I/opt/aorustlib', '-L/opt/aorustlib', '-laorust'])
 
     cmd.extend(['-s','ASSERTIONS=1'])
     cmd.extend(definition.get_extra_args())
@@ -138,7 +138,7 @@ def main():
     # Add all c source files if there are any
     for f in c_source_files:
         cmd.append(quote(f))
-    
+
     # Add the compile file and link libraries
     cmd.extend(['/tmp/compile.c'])
     cmd.extend([quote(v.filepath) for v in link_libraries])
@@ -157,6 +157,7 @@ def main():
     # add metering library
     # meter_cmd = ['node', '/opt/node/apply-metering.cjs']
     # shell_exec(*meter_cmd)
+
     if config.keep_js is False:
         shell_exec(*['rm', os.path.join(os.getcwd(), 'process.js')])
 

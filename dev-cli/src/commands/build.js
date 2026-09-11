@@ -3,8 +3,10 @@
 import { Command } from '../deps.js'
 import { VERSION } from '../versions.js'
 
-export async function build () {
+export async function build(customImage) {
   const pwd = Deno.cwd()
+  const image = customImage || `p3rmaw3b/ao:${VERSION.IMAGE}`
+
   const p = Deno.run({
     cmd: [
       'docker',
@@ -13,7 +15,7 @@ export async function build () {
       'linux/amd64',
       '-v',
       `${pwd}:/src`,
-      `p3rmaw3b/ao:${VERSION.IMAGE}`,
+      image,
       'ao-build-module'
     ]
   })
@@ -21,5 +23,8 @@ export async function build () {
 }
 
 export const command = new Command()
-  .description('Build the Lua Project into WASM')
-  .action(build)
+  .description('Build the Project into WASM')
+  .option('-i, --image <image:string>', 'Specify a custom Docker image to use')
+  .action(async (options) => {
+    await build(options.image)
+  })
