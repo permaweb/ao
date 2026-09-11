@@ -1,7 +1,7 @@
-# Defintion of Delivery
+# Definition of Delivery
 
-The Definition of Delivery or definition of done is provide to give developers
-on direction of what is required to deliver a issue. It also helps code
+The Definition of Delivery or definition of done is provided to give developers
+on direction of what is required to deliver an issue. It also helps code
 reviewers with what to review when reviewing an issue.
 
 The three core concepts that all issues should contain for developers are:
@@ -17,7 +17,7 @@ Some critical requirements for a definition of done:
 
 By using stratified design and clean architecture concepts we can cleanly
 separate logic from side effects, this provides us the ability to write unit and
-integration tests that delivery high effectiveness at a low implementation cost.
+integration tests that deliver high effectiveness at a low implementation cost.
 
 2. Technical Documentation explaining the usability of the feature.
 
@@ -45,5 +45,5 @@ Does the code accomplish the issue?
 
 Is there automated tests that reliably verify any logic added to the delivery?
 
-Is there enough documentation to satify my future self (or someone else?) to
+Is there enough documentation to satisfy my future self (or someone else?) to
 maintain this issue?
