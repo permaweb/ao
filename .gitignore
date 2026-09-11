@@ -12,3 +12,5 @@ ao-cache
 .terraform
 .terragrunt-cache
 terraform/*.plan
+
+benchmark.js
