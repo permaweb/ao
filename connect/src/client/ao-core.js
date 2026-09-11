@@ -88,8 +88,13 @@ export function spawnWith(deps) {
 
     if (!scheduler) throw new Error('No scheduler provided')
     if (!module) throw new Error('No module provided')
+    if (typeof module !== 'string') {
+      throw new Error('module must be a transaction-id string')
+    }
 
     const authority = process.env.AUTHORITY || args.authority || scheduler
+    const executionDevice =
+      process.env.EXECUTION_DEVICE || args.executionDevice || 'genesis-wasm@1.0'
 
     debugLog('info', 'Node URL:', deps.url)
     debugLog('info', 'Scheduler:', scheduler)
@@ -102,7 +107,7 @@ export function spawnWith(deps) {
         device: 'process@1.0',
         'scheduler-device': 'scheduler@1.0',
         'push-device': 'push@1.0',
-        'execution-device': 'genesis-wasm@1.0',
+        'execution-device': executionDevice,
         Authority: authority,
         Scheduler: scheduler,
         Module: module,

@@ -168,8 +168,16 @@ const processId = await spawn({
   signer: createSigner(wallet),
   tags,
   data,
+  // `mainnet` mode only: the execution device the process runs on. Defaults to
+  // "genesis-wasm@1.0"; set e.g. "lua@5.3a" to spawn a native Lua process.
+  // May also be set via the EXECUTION_DEVICE environment variable.
+  executionDevice,
 });
 ```
+
+> In `mainnet` mode, `module` must be a transaction id (a string) referencing an
+> uploaded module.  `executionDevice` selects the process's execution
+> device (default `genesis-wasm@1.0`).
 
 #### `connect`
 
