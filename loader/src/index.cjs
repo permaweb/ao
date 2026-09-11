@@ -16,6 +16,7 @@ const metering = require('@permaweb/wasm-metering') // Re-enabled metering
 
 /**
  * @typedef Message
+ * @property {string} Id
  * @property {string} [Signature]
  * @property {string} Owner
  * @property {string} Target
@@ -52,7 +53,7 @@ const metering = require('@permaweb/wasm-metering') // Re-enabled metering
 
 /**
  * @typedef Environment
- * @property {{Id: string, Owner: string, Tags: Tag[]}} Process
+ * @property {Message} Process
  */
 
 /**
