@@ -8,6 +8,7 @@ import { messageSchema } from '../model.js'
 import { loadModuleWith } from '../lib/loadModule.js'
 import { mapFrom } from '../utils.js'
 import { readStateWith } from './readState.js'
+import { dryRunFinalStateWith } from './dryRunFinalState.js'
 
 /**
  * TODO: should this be an effect or shared util?
@@ -71,6 +72,8 @@ const cyrb53 = (str, seed = 0) => {
  * @returns {ReadResult}
  */
 export function dryRunWith (env) {
+  if (env.DRYRUN_FINAL_STATE) return dryRunFinalStateWith(env)
+
   const DRY_RUN_DEFAULT_MAX_PROCESS_AGE = env.DRY_RUN_DEFAULT_MAX_PROCESS_AGE
   const DRY_RUN_RESULT_MAX_AGE = env.DRY_RUN_RESULT_MAX_AGE
   const DRY_RUN_PROCESS_CACHE_TTL = env.DRY_RUN_PROCESS_CACHE_TTL

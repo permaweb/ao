@@ -268,6 +268,11 @@ export const domainConfigSchema = z.object({
    */
   DRY_RUN_RESULT_MAX_AGE: positiveIntSchema,
   /**
+   * Evaluate dry-runs directly on the latest trusted Arweave checkpoint,
+   * without loading or replaying scheduler messages after that checkpoint.
+   */
+  DRYRUN_FINAL_STATE: z.boolean().default(false),
+  /**
    * The size of the page to load when fetching messages from the AO SU.
    */
   LOAD_MESSAGES_PAGE_SIZE: positiveIntSchema,

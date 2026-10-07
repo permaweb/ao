@@ -1015,6 +1015,71 @@ export function findLatestProcessMemoryWith ({
       .chain(fromPromise(findLatestVerified))
   }
 
+  /**
+   * Select the checkpoint at the latest evaluated process position without
+   * replaying scheduler messages to validate it. The owners supplied to the
+   * checkpoint query have already constrained this list to trusted owners.
+   *
+   * This is used only by DRYRUN_FINAL_STATE, where scheduler interaction is
+   * deliberately disabled.
+   */
+  const findLatestTrusted = async ({ checkpoints, preferredCheckponts }) => {
+    const checkpointsToUse = preferredCheckponts.length > 0 ? preferredCheckponts : checkpoints
+    if (!checkpointsToUse.length) return
+
+    const position = (checkpoint) => {
+      const tags = parseTags(checkpoint.node.tags)
+      return [
+        maybeParseInt(tags.Timestamp) ?? -1,
+        maybeParseInt(tags.Nonce) ?? -1,
+        maybeParseInt(tags['Block-Height']) ?? -1
+      ]
+    }
+    const comparePosition = (left, right) => {
+      const leftPosition = position(left)
+      const rightPosition = position(right)
+      for (let index = 0; index < leftPosition.length; index++) {
+        const difference = leftPosition[index] - rightPosition[index]
+        if (difference) return difference
+      }
+      return left.node.id.localeCompare(right.node.id)
+    }
+
+    const latest = [...checkpointsToUse].sort(comparePosition).at(-1)
+    const tags = parseTags(latest.node.tags)
+    logger(
+      'Using latest trusted Arweave checkpoint "%s" for process "%s" without scheduler validation',
+      latest.node.id,
+      tags.Process
+    )
+    const Memory = await downloadCheckpointFromArweave({
+      id: latest.node.id,
+      encoding: tags['Content-Encoding'] || ''
+    }).toPromise()
+
+    return {
+      id: latest.node.id,
+      timestamp: parseInt(tags.Timestamp),
+      assignmentId: tags.Assignment,
+      hashChain: tags['Hash-Chain'],
+      epoch: maybeParseInt(tags.Epoch),
+      nonce: maybeParseInt(tags.Nonce),
+      ordinate: tags.Nonce,
+      module: tags.Module,
+      blockHeight: parseInt(tags['Block-Height']),
+      cron: tags['Cron-Interval'],
+      encoding: tags['Content-Encoding'],
+      Memory
+    }
+  }
+
+  const determineLatestTrustedCheckpoint = ({ checkpoints, preferredCheckponts }) => {
+    return of({ checkpoints, preferredCheckponts })
+      .map(removeIgnoredCheckpoints)
+      .map(removeIgnoredPreferredCheckpoints)
+      .chain(fromPromise(findLatestTrusted))
+  }
+
   function decodeData (encoding) {
     /**
      * TODO: add more encoding options
@@ -1266,7 +1331,7 @@ export function findLatestProcessMemoryWith ({
   }
 
   function maybeCheckpointFromArweave (args) {
-    const { processId, omitMemory } = args
+    const { processId, omitMemory, arweaveOnly } = args
 
     if (PROCESS_IGNORE_ARWEAVE_CHECKPOINTS.includes(processId)) {
       logger('Arweave Checkpoints are ignored for process "%s". Not attempting to query gateway...', processId)
@@ -1312,7 +1377,7 @@ export function findLatestProcessMemoryWith ({
             }
           })
       })
-      .chain(determineLatestVerifiedCheckpoint)
+      .chain(arweaveOnly ? determineLatestTrustedCheckpoint : determineLatestVerifiedCheckpoint)
       .bimap(
         (err) => {
           logger('Latest checkpoint verification error', { err })
@@ -1326,9 +1391,9 @@ export function findLatestProcessMemoryWith ({
         if (!latestCheckpoint) return Rejected(args)
 
         /**
-         * We have found a Checkpoint that we can use, and
-         * have evaluated up to its memory to verify, so we
-         * return the already calculated memory
+         * We have found a checkpoint that we can use, so return its memory.
+         * In the normal path this memory was scheduler-validated. In the
+         * arweaveOnly path it came directly from the latest trusted checkpoint.
          */
         return of()
           .map(() => {
@@ -1365,7 +1430,7 @@ export function findLatestProcessMemoryWith ({
                 { checkpointTxId: latestCheckpoint.id, ...latestCheckpoint },
                 err
               )
-              return args
+              return arweaveOnly ? err : args
             },
             identity
           )
@@ -1463,14 +1528,23 @@ export function findLatestProcessMemoryWith ({
     }
   }
 
-  return ({ processId, timestamp, ordinate, cron, omitMemory = false }) => {
+  return ({ processId, timestamp, ordinate, cron, omitMemory = false, arweaveOnly = false }) => {
     /**
      * If no timestamp is provided, then we're actually interested in the
      * latest cached memory, so we make sure to set before to that flag used downstream
      */
     const before = timestamp ? { timestamp, ordinate, cron } : LATEST
 
-    return of({ processId, before, omitMemory })
+    const args = { processId, before, omitMemory, arweaveOnly }
+
+    if (arweaveOnly) {
+      return of(args)
+        .chain(maybeCheckpointFromArweave)
+        .chain(maybeOld({ processId, before }))
+        .toPromise()
+    }
+
+    return of(args)
       .chain(maybeCached)
       .bichain(maybeFile, Resolved)
       .bichain(maybeRecord, Resolved)

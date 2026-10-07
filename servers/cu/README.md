@@ -149,6 +149,10 @@ There are a few environment variables that you can set. Besides
 to be retrieved from the dryrun cache.
 - `DRY_RUN_PROCESS_CACHE_TTL`: the TTL of the dryrun process memory cache.
   If a eval stream is more nonces behind than this limit, a 503 is returned.
+- `DRYRUN_FINAL_STATE`: when set to `true`, dry-runs load the latest trusted
+  process checkpoint from Arweave and evaluate only the submitted dry-run
+  message on top of it. Scheduler messages and cron messages after the
+  checkpoint are not loaded or evaluated. Defaults to `false`.
 - `LOAD_MESSAGES_PAGE_SIZE`: the size of the page to load when fetching messages from the AO SU.
 
 ## Tests

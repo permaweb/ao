@@ -934,6 +934,34 @@ describe('ao-process', () => {
 
       const incrementedTarget = { ...target, timestamp: cachedEval.timestamp + ((mappedEdges.length + 1) * 1000), ordinate: cachedEval.nonce + mappedEdges.length }
 
+      test('arweaveOnly bypasses local checkpoints and scheduler validation', async () => {
+        const findLatestProcessMemory = findLatestProcessMemorySchema.implement(findLatestProcessMemoryWith({
+          ...deps,
+          cache: {
+            get: () => assert.fail('should not read the in-memory process cache')
+          },
+          findFileCheckpointBefore: async () => assert.fail('should not read file checkpoints'),
+          findRecordCheckpointBefore: async () => assert.fail('should not read record checkpoints'),
+          readStateFromCheckpoint: async () => assert.fail('should not validate through scheduler replay'),
+          queryGateway: async () => ({
+            data: {
+              transactions: {
+                edges: mappedEdges
+              }
+            }
+          })
+        }))
+
+        const res = await findLatestProcessMemory({ processId: PROCESS, arweaveOnly: true })
+
+        assert.equal(res.src, 'arweave')
+        assert.deepStrictEqual(res.Memory, Memory)
+        assert.equal(
+          res.ordinate,
+          mappedEdges[mappedEdges.length - 1].node.tags.find(({ name }) => name === 'Nonce')?.value
+        )
+      })
+
       test('should use the latest retrieved checkpoint', async () => {
         const findLatestProcessMemory = findLatestProcessMemorySchema.implement(findLatestProcessMemoryWith({
           ...deps,
