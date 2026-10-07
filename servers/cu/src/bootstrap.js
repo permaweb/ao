@@ -216,6 +216,7 @@ export const createApis = async (ctx) => {
   ctx.logger('Ignoring Arweave Checkpoints for processes [ %s ]', ctx.PROCESS_IGNORE_ARWEAVE_CHECKPOINTS.join(', '))
   ctx.logger('Ignoring Arweave Checkpoints [ %s ]', ctx.IGNORE_ARWEAVE_CHECKPOINTS.join(', '))
   ctx.logger('Trusting Arweave Checkpoint Owners [ %s ]', ctx.PROCESS_CHECKPOINT_TRUSTED_OWNERS.join(', '))
+  ctx.logger('Dry-run final-state mode is set to "%s"', ctx.DRYRUN_FINAL_STATE)
   ctx.logger('Allowing only process owners [ %s ]', ctx.ALLOW_OWNERS.join(', '))
   ctx.logger('Restricting processes [ %s ]', ctx.RESTRICT_PROCESSES.join(', '))
   ctx.logger('Allowing only processes [ %s ]', ctx.ALLOW_PROCESSES.join(', '))
@@ -535,7 +536,8 @@ export const createApis = async (ctx) => {
     }),
     DRY_RUN_DEFAULT_MAX_PROCESS_AGE: ctx.DRY_RUN_DEFAULT_MAX_PROCESS_AGE,
     DRY_RUN_PROCESS_CACHE_TTL: ctx.DRY_RUN_PROCESS_CACHE_TTL,
-    DRY_RUN_RESULT_MAX_AGE: ctx.DRY_RUN_RESULT_MAX_AGE
+    DRY_RUN_RESULT_MAX_AGE: ctx.DRY_RUN_RESULT_MAX_AGE,
+    DRYRUN_FINAL_STATE: ctx.DRYRUN_FINAL_STATE
   })
 
   /**

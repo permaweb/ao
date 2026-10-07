@@ -62,7 +62,8 @@ export const findLatestProcessMemorySchema = z.function()
     timestamp: z.coerce.number().nullish(),
     ordinate: z.coerce.string().nullish(),
     cron: z.string().nullish(),
-    omitMemory: z.boolean().nullish()
+    omitMemory: z.boolean().nullish(),
+    arweaveOnly: z.boolean().default(false)
   })).returns(z.promise(processCheckpointSchema))
 
 export const saveLatestProcessMemorySchema = z.function()
