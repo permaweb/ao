@@ -68,7 +68,7 @@ describe('loadProcess', () => {
       logger
     })
 
-    const res = await loadProcess({ id: PROCESS, to: 1697574792000 }).toPromise()
+    const res = await loadProcess({ id: PROCESS, to: 1697574792000, messageId: 'message-123' }).toPromise()
     assert.deepStrictEqual(res.result, cachedEvaluation.output)
     assert.deepStrictEqual(res.from, cachedEvaluation.timestamp)
     assert.deepStrictEqual(res.ordinate, cachedEvaluation.ordinate)
