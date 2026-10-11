@@ -59,11 +59,11 @@ export const mapNode = pipe(
             Nonce: pipe(path(['Nonce']), parseInt),
             Timestamp: pipe(path(['Timestamp']), parseInt),
             'Block-Height': pipe(
-            /**
-             * Returns a left padded integer like '000001331218'
-             *
-             * So use parseInt to convert it into a number
-             */
+              /**
+               * Returns a left padded integer like '000001331218'
+               *
+               * So use parseInt to convert it into a number
+               */
               path(['Block-Height']),
               parseInt
             ),
@@ -205,8 +205,8 @@ export const loadMessagesWith = ({ hashChain, fetch, logger: _logger, pageSize }
    * When the currently fetched page is drained, the next page is fetched
    * dynamically
    */
-  function fetchAllPages ({ suUrl, processId, from, to }) {
-    async function fetchPage ({ from }) {
+  function fetchAllPages({ suUrl, processId, from, to }) {
+    async function fetchPage({ from }) {
       const params = new URLSearchParams(filter(isNotNil, { 'process-id': processId, from, to, limit: pageSize }))
 
       return backoff(
@@ -215,7 +215,7 @@ export const loadMessagesWith = ({ hashChain, fetch, logger: _logger, pageSize }
       )
     }
 
-    return async function * scheduled () {
+    return async function* scheduled() {
       let curPage = []
       let curFrom = from
       let hasNextPage = true
@@ -258,7 +258,7 @@ export const loadMessagesWith = ({ hashChain, fetch, logger: _logger, pageSize }
     }
   }
 
-  function mapAoMessage ({ processId, processBlock, assignmentId, hashChain, processOwner, processTags, moduleId, moduleOwner, moduleTags, logger }) {
+  function mapAoMessage({ processId, processBlock, assignmentId, hashChain, processOwner, processTags, moduleId, moduleOwner, moduleTags, logger }) {
     const AoGlobal = {
       Process: { Id: processId, Owner: processOwner, Tags: processTags },
       Module: { Id: moduleId, Owner: moduleOwner, Tags: moduleTags }
@@ -278,7 +278,7 @@ export const loadMessagesWith = ({ hashChain, fetch, logger: _logger, pageSize }
     let simulateError = false
     let prevAssignmentId = assignmentId
     let prevHashChain = hashChain
-    return async function * (edges) {
+    return async function* (edges) {
       for await (const edge of edges) {
         const scheduled = pipe(
           prop('node'),

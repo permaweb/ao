@@ -3,6 +3,7 @@ import { connect as schedulerUtilsConnect, locate } from '@permaweb/ao-scheduler
 import AOCore from '@permaweb/ao-core-libs'
 
 import * as CoreClient from './client/ao-core.js'
+import * as ArweaveSchedulerClient from './client/arweave-scheduler.js'
 import * as MuClient from './client/ao-mu.js'
 import * as CuClient from './client/ao-cu.js'
 import * as GatewayClient from './client/gateway.js'
@@ -267,6 +268,45 @@ export function connectWith ({ createDataItemSigner, createSigner }) {
   }
 
   /**
+   * Native Arweave transport for tokens scheduled by `arweave-scheduler@1.0'.
+   *
+   * Messages are signed Arweave L1 transactions rather than ANS-104 data items,
+   * so this cannot be an option beside `mainnet': a tag cannot select a
+   * transaction format, and an incomplete upgrade must fail with
+   * `Unrecognized MODE' rather than silently sending the wrong shape.
+   *
+   * `Action', `Quantity' and `Recipient' keep their meaning. The tx codec
+   * lowercases tag names, so existing capitalised exchange tags work unchanged.
+   */
+  function arweaveSchedulerMode ({
+    MODE,
+    signer,
+    URL = DEFAULT_HB_URL,
+    GATEWAY_URL,
+    ARWEAVE,
+    fetch = defaultFetch,
+    noLog
+  }) {
+    const logger = _logger.child('arweave-scheduler')
+    if (!noLog) logger('Mode Activated %s', '\u2693')
+
+    const deps = { fetch, URL, GATEWAY_URL, arweave: ARWEAVE, signer }
+
+    return {
+      MODE: 'arweave-scheduler',
+      message: ArweaveSchedulerClient.messageWith(deps),
+      balance: ArweaveSchedulerClient.balanceWith(deps),
+      result: ArweaveSchedulerClient.resultWith(deps),
+      waitForAssignment: ArweaveSchedulerClient.waitForAssignmentWith(deps),
+      currentSlot: ArweaveSchedulerClient.currentSlotWith(deps),
+      verifyProcess: ArweaveSchedulerClient.verifyProcessWith(deps),
+      request: ArweaveSchedulerClient.requestWith(deps),
+      createSigner,
+      createDataItemSigner
+    }
+  }
+
+  /**
    * Build the sdk apis using the provided configuration. You can currently specify
    *
    * - a GATEWAY_URL
@@ -296,7 +336,7 @@ export function connectWith ({ createDataItemSigner, createSigner }) {
    * // These are functionally equivalent
    * connect() == { spawn, message, result, results, monitor }
    *
-   * @typedef {'legacy' | 'mainnet'} ConnectMode
+   * @typedef {'legacy' | 'mainnet' | 'arweave-scheduler'} ConnectMode
    *
    * @typedef ConnectArgsShared
    * @property {string} [GATEWAY_URL] - the url of the desried Gateway.
@@ -312,6 +352,14 @@ export function connectWith ({ createDataItemSigner, createSigner }) {
    * @property {string} [URL] - the url of the desried ao Unit. Only applicable in 'mainnet' mode
    * @property {string} [device] - the default path either 'relay@1.0' or 'process@1.0'
    *
+   * @typedef ConnectArgsArweaveScheduler
+   * @property {any} [signer] - a JWK, an object exposing sign(tx), or a custody
+   *   adapter (tx, { arweave }) => Promise<Transaction|void>. Signs Arweave L1
+   *   transactions, not ANS-104 data items.
+   * @property {string} [URL] - the HyperBEAM node used for submission and reads
+   * @property {any} [ARWEAVE] - an arweave-js instance to reuse. When omitted it
+   *   is imported on first write, so readers never bundle it.
+   *
    * @typedef ConnectArgs
    * @property {ConnectMode} [MODE] - the mode that connect apis will be run in.
    *
@@ -323,8 +371,12 @@ export function connectWith ({ createDataItemSigner, createSigner }) {
    * @param {{ MODE: 'mainnet'} & ConnectArgsShared & ConnectArgsMainnet } args
    * @returns {ReturnType<typeof mainnetMode>}
    *
+   * @overload
+   * @param {{ MODE: 'arweave-scheduler'} & ConnectArgsShared & ConnectArgsArweaveScheduler } args
+   * @returns {ReturnType<typeof arweaveSchedulerMode>}
+   *
    * @param {ConnectArgs} args
-   * @returns {ReturnType<typeof legacyMode> | ReturnType<typeof mainnetMode>}
+   * @returns {ReturnType<typeof legacyMode> | ReturnType<typeof mainnetMode> | ReturnType<typeof arweaveSchedulerMode>}
    */
   function connect (args = {}) {
     let { GRAPHQL_URL, GATEWAY_URL = DEFAULT_GATEWAY_URL, ...restArgs } = args
@@ -335,6 +387,9 @@ export function connectWith ({ createDataItemSigner, createSigner }) {
 
     if (MODE === 'legacy') return legacyMode({ ...restArgs, GRAPHQL_URL })
     if (MODE === 'mainnet') return mainnetMode({ ...restArgs, GRAPHQL_URL })
+    if (MODE === 'arweave-scheduler') {
+      return arweaveSchedulerMode({ ...restArgs, GATEWAY_URL, GRAPHQL_URL })
+    }
 
     throw new Error(`Unrecognized MODE: ${MODE}`)
   }
