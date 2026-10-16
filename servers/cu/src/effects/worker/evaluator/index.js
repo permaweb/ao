@@ -6,6 +6,7 @@ import { worker, Transfer } from 'workerpool'
 
 import { createLogger } from '../../../domain/logger.js'
 import { arrayBufferFromMaybeView } from '../../../domain/utils.js'
+import { eventVacuum } from '../../../domain/event-vacuum.js'
 
 import { createApis } from './main.js'
 
@@ -42,7 +43,7 @@ worker({
      * Transfer the ownership of the underlying ArrayBuffer back to the main thread
      * to prevent copying it over
      */
-    .then((output) => {
+    .then(async (output) => {
       /**
        * The evaluation stream is being closed,
        * so no output is returned, so nothing
@@ -72,6 +73,21 @@ worker({
        * as Memory, instead of a View?
        */
       output.Memory = arrayBufferFromMaybeView(output.Memory)
+
+      if (eventVacuum) {
+        const { processId, ordinate, message } = args[0]
+
+        // Don't event vacuum on dry runs
+        if (message && !message['Read-Only']) {
+          await eventVacuum.processLogs(
+            output.Error ?? output.Output.data,
+            processId,
+            +ordinate,
+            output.GasUsed,
+            arrayBufferFromMaybeView(output.Memory).byteLength
+          )
+        }
+      }
 
       return new Transfer(output, [output.Memory])
     })
