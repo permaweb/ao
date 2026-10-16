@@ -22,9 +22,9 @@ it.
 The `ao` computer is a single, unified computing environment (a
 [Single System Image](https://en.wikipedia.org/wiki/Single_system_image)),
 hosted on a heterogenous set of nodes in a distributed network. `ao` is designed
-to offer an environment in which an arbitrary number of paralell processes can
+to offer an environment in which an arbitrary number of parallel processes can
 be resident, coordinating through an open message passing layer. This message
-passing standard connects the machine's indepedently operating processes
+passing standard connects the machine's independently operating processes
 together into a 'web' -- in the same way that websites operate on independent
 servers but are conjoined into a cohesive, unified experience via hyperlinks.
 
@@ -33,7 +33,7 @@ operation of computation without protocol-enforced limitations on size and form,
 while also maintaining the verifiability (and thus, trust minimization) of the
 network itself. Further, `ao`'s distributed and modular architecture allows
 existing smart contract platforms to easily 'plug in' to the network, acting as
-a single process which can send and recieve messages from any other process.
+a single process which can send and receive messages from any other process.
 
 Instead of enforcing one set of choices upon all users of the computing
 environment, `ao` is built in a modular form: Allowing users to choose which
@@ -54,7 +54,7 @@ Due to its scalability, the natural way for developers to use `ao` is to spawn
 their own command-line (`aos`) process inside the network, and to start issuing
 commands. This DevX is similar to how developers create a new server instance at
 a cloud host and connect to it via SSH, except that this command line process
-has the properties of a smart contracts. Their commandline process on `ao`
+has the properties of a smart contract. Their commandline process on `ao`
 doesn't live in any specific data center or at any one physical location, and
 its computation is completely trustless. Every user can message and interact
 with every other process and program. The result of this is a global 'Single
@@ -95,7 +95,7 @@ and cookbook - https://cookbook_ao.arweave.dev
 - [`ao` Compute Unit (`cu`)](./servers/cu): An implementation of the `ao`
   Compute Unit, aka a `cu` (pronounced "koo" 🦘)
 - [`ao` Messenger Unit (`mu`)](./servers/mu): An implementation of the `ao`
-  Messaenger Unit, aka a `mu` (pronounced "moo" 🐄)
+  Messenger Unit, aka a `mu` (pronounced "moo" 🐄)
 - [`ao` Scheduler Unit (`su`)](./servers/su): An implementation of the `ao`
   Scheduler Unit, aka a `su` (pronounced "soo" 👧)
 - [`ao` Unit Router (`ur`)](./servers/ur): A Simple Reverse Proxy whose API can

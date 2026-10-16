@@ -165,4 +165,4 @@ To publish a new version, go to the
 [`ao` Loader workflow](https://github.com/permaweb/ao/actions/workflows/loader.yml)
 and click the `Run Workflow` button. Provide the semver compatible version you
 would like to bump to, and then click `Run Workflow`. This will trigger a
-Workflow Dispatch that will bump the version is the manifest files, build the module, and finally publish it to NPM
+Workflow Dispatch that will bump the version of the manifest files, build the module, and finally publish it to NPM
