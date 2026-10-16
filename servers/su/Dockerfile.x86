@@ -1,14 +1,14 @@
 ### NOTE: THIS WON'T WORK ON AN ARM64 DEVICE
 
 # Stage 1: Planner
-FROM --platform=linux/amd64 rust:1.75.0 AS planner
+FROM --platform=linux/amd64 rust:1.78.0 AS planner
 WORKDIR /app
 RUN cargo install cargo-chef
 COPY . .
 RUN cargo chef prepare --recipe-path recipe.json
 
 # Stage 2: Cache the build of the dependencies
-FROM --platform=linux/amd64 rust:1.75.0 AS cacher
+FROM --platform=linux/amd64 rust:1.78.0 AS cacher
 WORKDIR /app
 RUN cargo install cargo-chef
 RUN apt-get update && apt-get install -y \
@@ -24,7 +24,7 @@ RUN ls /lib/
 RUN cargo chef cook --release --recipe-path recipe.json
 
 # Stage 3: Build binary with pre-built and cached dependencies
-FROM --platform=linux/amd64 rust:1.75.0 AS builder
+FROM --platform=linux/amd64 rust:1.78.0 AS builder
 COPY . /app
 WORKDIR /app
 COPY --from=cacher /app/target target
