@@ -70,8 +70,9 @@ const fromEvaluationDoc = pipe(
   toEvaluation
 )
 
+// TODO: Change the query to use process Id, message Id, order by id
 export function findEvaluationWith ({ db }) {
-  function createQuery ({ processId, timestamp, ordinate, cron }) {
+  function createQuery ({ processId, messageId }) {
     return {
       sql: `
         SELECT
@@ -79,14 +80,22 @@ export function findEvaluationWith ({ db }) {
           ordinate, "blockHeight", cron, "evaluatedAt", output
         FROM ${EVALUATIONS_TABLE}
         WHERE
-          id = ?;
+          id > ? AND id <= ?
+          messageId = ?
+        ORDER BY
+          id ASC
+        LIMIT 1;
       `,
-      parameters: [createEvaluationId({ processId, timestamp, ordinate, cron })]
+      parameters: [
+        createEvaluationId({ processId, timestamp: '' }),
+        createEvaluationId({ processId, timestamp: COLLATION_SEQUENCE_MAX_CHAR }),
+        messageId
+      ]
     }
   }
 
-  return ({ processId, to, ordinate, cron }) => {
-    return of({ processId, timestamp: to, ordinate, cron })
+  return ({ processId, messageId }) => {
+    return of({ processId, messageId })
       .chain(fromPromise((params) => db.query(createQuery(params))))
       .map(defaultTo([]))
       .map(head)
