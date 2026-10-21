@@ -1,8 +1,10 @@
 ## Version Update
 
-Select exactly one version update type. This choice is used by CI after the PR is merged into
-`main` to update `connect/package.json`, create the release tag, and publish the package to npm.
+Select exactly one option. For a release, CI uses the selected version type after
+merge to `main` to update `connect/package.json`, create a tag, and publish to npm.
+Choose `skip` for maintenance that needs no version bump, tag, build, or npm publication.
 
 - [ ] major
 - [ ] minor
 - [ ] patch
+- [ ] skip

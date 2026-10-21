@@ -25,7 +25,7 @@ jobs:
         with:
           script: |
             const body = context.payload.pull_request?.body ?? '';
-            const updateTypes = ['major', 'minor', 'patch'];
+            const updateTypes = ['major', 'minor', 'patch', 'skip'];
             const selected = updateTypes.filter((type) => {
               const pattern = new RegExp(`^- \\[[xX]\\]\\s*${type}\\s*$`, 'im');
               return pattern.test(body);

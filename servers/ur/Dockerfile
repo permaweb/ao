@@ -1,5 +1,5 @@
 # Use the official Node.js image as a base image
-FROM node:22
+FROM node:22.23.4
 
 # Set the working directory inside the container
 WORKDIR /ao
