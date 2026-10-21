@@ -50,7 +50,7 @@ Generate the wallets for the SU, MU, and CU:
 - `LUAROCKS_VERSION`: version of LuaRocks to be install. (Defaults to `2.4.4`)
 - `EMSCRIPTEN_VERSION`: version of Emscripten to be install. (Defaults to `3.1.59`)
 - `RUST_VERSION`: version of rust to be install. (Defaults to `1.79.0`)
-- `NODE_VERSION`: version of node to be install. (Defaults to `22.4.1`)
+- `NODE_VERSION`: version of node to be install. (Defaults to `22.23.4`)
 
 ## Recommended System Requirements
 

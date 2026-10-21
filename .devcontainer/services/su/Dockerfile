@@ -1,4 +1,4 @@
-FROM node:alpine as downloader
+FROM node:22.23.4-alpine as downloader
 ARG BRANCH
 ARG REPO
 

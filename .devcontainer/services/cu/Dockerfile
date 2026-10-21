@@ -1,4 +1,4 @@
-FROM node:alpine as downloader
+FROM node:22.23.4-alpine as downloader
 ARG BRANCH
 ARG REPO
 
@@ -10,7 +10,7 @@ WORKDIR /download
 RUN git clone --branch=${BRANCH} --depth=1 ${REPO}
 
 
-FROM node:alpine
+FROM node:22.23.4-alpine
 
 WORKDIR /usr/src/cu
 
