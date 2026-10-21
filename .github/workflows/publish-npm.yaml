@@ -15,6 +15,7 @@ on:
           - major
           - minor
           - patch
+          - skip
 
 concurrency:
   group: npm-release
@@ -36,21 +37,12 @@ jobs:
           fetch-depth: 0
           token: ${{ secrets.DEPLOY_PAT || github.token }}
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22.23.4'
-          registry-url: 'https://registry.npmjs.org'
-
-      - name: Install npm with OIDC support
-        run: npm install --global npm@^11.5.1
-
       - name: Get version update type
         id: release-type
         uses: actions/github-script@v7
         with:
           script: |
-            const updateTypes = ['major', 'minor', 'patch'];
+            const updateTypes = ['major', 'minor', 'patch', 'skip'];
 
             function selectedUpdateTypes(body) {
               return updateTypes.filter((type) => {
@@ -101,7 +93,19 @@ jobs:
             core.setOutput('pr-number', String(pullRequest.number));
             core.info(`Selected version update from PR #${pullRequest.number}: ${selected[0]}`);
 
+      - name: Setup Node.js
+        if: steps.release-type.outputs.update-type != 'skip'
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22.23.4'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Install npm with OIDC support
+        if: steps.release-type.outputs.update-type != 'skip'
+        run: npm install --global npm@^11.5.1
+
       - name: Bump package version
+        if: steps.release-type.outputs.update-type != 'skip'
         id: package-version
         run: |
           npm version "$UPDATE_TYPE" --no-git-tag-version
@@ -115,6 +119,7 @@ jobs:
           UPDATE_TYPE: ${{ steps.release-type.outputs.update-type }}
 
       - name: Check release availability
+        if: steps.release-type.outputs.update-type != 'skip'
         run: |
           if git tag --list "v${PACKAGE_VERSION}" | grep -q .; then
             echo "::error::Tag v${PACKAGE_VERSION} already exists"
@@ -130,14 +135,17 @@ jobs:
           PACKAGE_VERSION: ${{ steps.package-version.outputs.version }}
 
       - name: Install dependencies
+        if: steps.release-type.outputs.update-type != 'skip'
         run: npm ci
         working-directory: ./connect
 
       - name: Build package
+        if: steps.release-type.outputs.update-type != 'skip'
         run: npm run build
         working-directory: ./connect
 
       - name: Commit version bump and tag
+        if: steps.release-type.outputs.update-type != 'skip'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -150,5 +158,6 @@ jobs:
           PACKAGE_VERSION: ${{ steps.package-version.outputs.version }}
 
       - name: Publish to NPM
+        if: steps.release-type.outputs.update-type != 'skip'
         run: npm publish
         working-directory: ./connect
