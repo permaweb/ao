@@ -77,7 +77,7 @@ including automatic credential refresh. The region comes from the URL; for globa
 endpoints, S3's bucket-region header, `AWS_REGION`, `AWS_DEFAULT_REGION`, and `us-east-1`
 are used in that order. No new URL format or static credentials in `.env` are required.
 The role must have `s3:GetObject` access to the exact process whitelist and rate-limit
-objects it reads. The MU does not read `mu-asg-ips.json`; that file is consumed by SU.
+objects it reads. The IP whitelist is consumed by SU.
 See the [SU private S3 setup](../su/README.md#private-s3-configuration) for IAM policy
 and bucket migration details.
 
