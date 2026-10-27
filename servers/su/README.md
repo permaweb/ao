@@ -73,7 +73,8 @@ To use the fully local storage system set the following evnironment variables.
 ### Private S3 configuration
 
 The whitelist URLs can continue to use their existing HTTPS S3 addresses, for example
-`https://legacy-limit-config.s3.us-west-1.amazonaws.com/mu-asg-ips.json`.
+`https://example-config-bucket.s3.us-west-1.amazonaws.com/allowed-ips.json`.
+Replace the example bucket name and object key with your own configuration location.
 Public HTTP(S) and public S3 files are fetched anonymously. When an AWS S3 REST
 endpoint returns HTTP 403, the SU retries with AWS Signature Version 4 authentication.
 Presigned URLs are used as supplied and are not signed again. Signed requests do not
@@ -93,7 +94,7 @@ attach this statement in an IAM permissions policy:
 {
   "Effect": "Allow",
   "Action": "s3:GetObject",
-  "Resource": "arn:aws:s3:::legacy-limit-config/mu-asg-ips.json"
+  "Resource": "arn:aws:s3:::example-config-bucket/allowed-ips.json"
 }
 ```
 

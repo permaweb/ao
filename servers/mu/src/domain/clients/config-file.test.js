@@ -3,7 +3,7 @@ import { test } from 'node:test'
 
 import { configCacheWith, fetchConfigWith, rateLimitConfigWith, s3Region } from './config-file.js'
 
-const location = 'https://legacy-limit-config.s3.us-west-1.amazonaws.com/config%20file//ips.json?versionId=one%2Btwo&tag=a&tag=b'
+const location = 'https://example-config-bucket.s3.us-west-1.amazonaws.com/config%20file//ips.json?versionId=one%2Btwo&tag=a&tag=b'
 const signingDate = new Date('2026-10-27T12:00:00Z')
 const roleCredentials = { accessKeyId: 'ROLEEXAMPLE', secretAccessKey: 'example-secret', sessionToken: 'example-session' }
 
@@ -58,7 +58,7 @@ test('private S3 retries with SigV4, preserving path, query, session token and d
   assert.equal(requests[1].input, location)
   const { headers, redirect } = requests[1].options
   assert.equal(redirect, 'error')
-  assert.equal(headers.host, 'legacy-limit-config.s3.us-west-1.amazonaws.com')
+  assert.equal(headers.host, 'example-config-bucket.s3.us-west-1.amazonaws.com')
   assert.equal(headers['x-amz-security-token'], roleCredentials.sessionToken)
   assert.equal(headers['x-amz-date'], '20261027T120000Z')
   assert.match(headers.authorization, /^AWS4-HMAC-SHA256 Credential=ROLEEXAMPLE\/20261027\/us-west-1\/s3\/aws4_request,/)

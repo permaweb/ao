@@ -188,7 +188,7 @@ mod tests {
     fn recognizes_s3_rest_endpoints_and_their_regions() {
         for (location, expected) in [
             (
-                "https://legacy-limit-config.s3.us-west-1.amazonaws.com/mu-asg-ips.json",
+                "https://example-config-bucket.s3.us-west-1.amazonaws.com/allowed-ips.json",
                 "us-west-1",
             ),
             ("https://bucket.s3.amazonaws.com/config.json", "us-east-1"),
