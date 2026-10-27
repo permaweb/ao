@@ -16,7 +16,7 @@ RUN npm i && npm run deploy
 
 
 # Stage 1: Build the dynamic binary
-FROM rust:1.75.0 as builder
+FROM rust:1.94.1 as builder
 
 # # Set the working directory in the container
 WORKDIR /usr/src/su

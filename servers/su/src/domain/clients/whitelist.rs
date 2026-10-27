@@ -1,7 +1,8 @@
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
 use serde::{Serialize, Deserialize};
-use reqwest::{Client, Url};
+use reqwest::Url;
+use super::config_file::fetch_config;
 
 use super::super::core::dal::{
     Log,
@@ -39,43 +40,18 @@ pub struct FileUrlWhitelist {
     router_mode: bool,
 }
 
-async fn fetch_whitelist(client: &Client, url: &Url) -> Result<WhitelistJson, String> {
-    let resp = client
-        .get(url.clone())
-        .send()
-        .await
-        .map_err(|e| format!("request failed: {e:?}"))?;
-
-    let status = resp.status();
-    if !status.is_success() {
-        let body = resp
-            .text()
-            .await
-            .unwrap_or_else(|_| "<failed to read body>".to_string());
-        return Err(format!("whitelist fetch failed: status={status}, body={body}"));
-    }
-
-    let bytes = resp
-        .bytes()
-        .await
-        .map_err(|e| format!("failed reading response bytes: {e:?}"))?;
-
-    serde_json::from_slice(&bytes).map_err(|e| format!("invalid json: {e:?}"))
-}
-
 impl FileUrlWhitelist {
     pub async fn new(whitelist_url: &String, own_url: &String, logger: Arc<dyn Log>, router_mode: bool) -> Result<Self, String> {
         let url = Url::parse(whitelist_url).map_err(|e| format!("invalid url: {e:?}"))?;
-        let client = Client::new();
 
-        let whitelist = fetch_whitelist(&client, &url).await?;
+        let whitelist = fetch_config::<WhitelistJson>(url.as_str()).await?;
         let whitelist = Arc::new(RwLock::new(whitelist));
 
         let whitelist_clone = whitelist.clone();
         tokio::spawn(async move {
             loop {
                 tokio::time::sleep(tokio::time::Duration::from_secs(10)).await;
-                match fetch_whitelist(&client, &url).await {
+                match fetch_config::<WhitelistJson>(url.as_str()).await {
                     Ok(updated) => {
                         *whitelist_clone.write().unwrap() = updated;
                         logger.log("Process whitelist refreshed".to_string());

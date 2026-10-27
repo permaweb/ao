@@ -5,6 +5,7 @@ import * as crypto from 'node:crypto'
 import * as B64js from 'base64-js'
 import cron from 'node-cron'
 
+import { rateLimitConfigWith } from './config-file.js'
 import { createTaskQueue, enqueueWith, dequeueWith, removeDequeuedTasksWith } from './taskQueue.js'
 import { domainConfigSchema, config } from '../../config.js'
 // Without this import the worker crashes
@@ -55,22 +56,18 @@ async function ownerToAddress (owner) {
   )
 }
 
-let rateLimitFile = workerData.DEFAULT_RATE_LIMIT ?? {}
+const rateLimitConfig = rateLimitConfigWith({
+  location: workerData.RATE_LIMIT_FILE_URL,
+  initialValue: workerData.DEFAULT_RATE_LIMIT ?? {}
+})
 cron.schedule('*/10 * * * *', async () => {
   try {
-    if (!workerData.RATE_LIMIT_FILE_URL) return
-    const fetchedRateLimitFile = await fetch(workerData.RATE_LIMIT_FILE_URL)
-      .then(res => res.json())
-      .catch(err => {
-        console.error('Error updating rate limit file', err)
-        return {}
-      })
-    rateLimitFile = fetchedRateLimitFile
+    await rateLimitConfig.refresh()
   } catch (e) {
     console.error('Error updating rate limit file', e)
   }
 })
-const getRateLimits = () => rateLimitFile
+const getRateLimits = rateLimitConfig.get
 
 /*
  * Here we create a logger and inject it, this logger has the

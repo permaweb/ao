@@ -23,7 +23,7 @@ This is an spec compliant `ao` Scheduler Unit, implemented as a Rust actix web s
 
 ## Prerequisites
 - PostgreSQL 14 or higher, and a database called `su`
-- Rust and Cargo version 1.75.0 https://www.rust-lang.org/tools/install (unless you are just planning to run the binary)
+- Rust and Cargo version 1.94.1 https://www.rust-lang.org/tools/install (unless you are just planning to run the binary)
 - Clang and LLVM
 
 
@@ -57,6 +57,8 @@ Create a .env file with the following variables, or set them in the OS:
 - `SU_FILE_SYNC_DB_DIR` a directory for a RocksDB backup that will hold the full binary files that are the bundles, messages, and assignments. Only used by the cli binary.
 - `SU_INDEX_SYNC_DB_DIR` a directory for a RocksDB backup that will hold an index of Processes and Messages for ordering and querying. Only used by the cli binary.
 - `CACHE_URL` an upload cache for process definitions
+- `IP_WHITELIST_URL` the HTTP(S) JSON array of permitted MU IP addresses, refreshed every 30 seconds
+- `PROCESS_WHITELIST_URL` the HTTP(S) process whitelist JSON, refreshed every 10 seconds when configured
 
 To use the fully local storage system set the following evnironment variables.
 - `USE_LOCAL_STORE`  if true the SU will operate on purely RocksDB
@@ -67,6 +69,46 @@ To use the fully local storage system set the following evnironment variables.
 
 > You can also use a `.env` file to set environment variables when running in
 > development mode, See the `.env.example` for an example `.env`
+
+### Private S3 configuration
+
+The whitelist URLs can continue to use their existing HTTPS S3 addresses, for example
+`https://legacy-limit-config.s3.us-west-1.amazonaws.com/mu-asg-ips.json`.
+Public HTTP(S) and public S3 files are fetched anonymously. When an AWS S3 REST
+endpoint returns HTTP 403, the SU retries with AWS Signature Version 4 authentication.
+Presigned URLs are used as supplied and are not signed again. Signed requests do not
+follow redirects; use the bucket's regional REST URL rather than its website endpoint.
+
+Attach an IAM instance profile to EC2 hosts, or an IAM task role to ECS tasks. The AWS
+credential provider chain loads and refreshes role credentials; no access keys need
+to be stored in `.env`. The service must be able to reach the instance/container
+credential endpoint. Local development can use a shared AWS profile (`AWS_PROFILE`).
+The region is inferred from the S3 URL; global endpoints use S3's bucket-region header,
+then `AWS_REGION` or `AWS_DEFAULT_REGION`, then `us-east-1`.
+
+Grant the SU role `s3:GetObject` on each required configuration object. For the IP list,
+attach this statement in an IAM permissions policy:
+
+```json
+{
+  "Effect": "Allow",
+  "Action": "s3:GetObject",
+  "Resource": "arn:aws:s3:::legacy-limit-config/mu-asg-ips.json"
+}
+```
+
+Add the process whitelist object's ARN if it is also private. Bucket listing and
+write permissions are not required. Cross-account access also requires a bucket
+policy allowing the service role; SSE-KMS objects require appropriate KMS key access.
+Keep the role used to update these files authorized to write them.
+
+Deploy the updated SU and MU before enabling all four S3 Block Public Access settings
+and removing public bucket-policy/ACL grants. Verify private reads using the actual
+service roles. A failed initial load of a configured whitelist prevents SU startup.
+Later refresh failures are logged and preserve the last successfully loaded list.
+The current AWS Rust libraries require Rust/Cargo 1.94.1 or newer, reflected in the SU
+Dockerfiles and development container defaults.
+
 
 ## Usage
 

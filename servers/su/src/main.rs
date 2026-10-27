@@ -14,7 +14,7 @@ use actix_web::{
 use serde::Deserialize;
 use serde_json::json;
 use tokio::time::interval;
-use reqwest;
+use su::domain::fetch_config;
 
 use su::domain::{flows, init_deps, router, Deps, PromMetrics};
 
@@ -95,9 +95,8 @@ fn is_ip_allowed(ip: &str, whitelist: &IpWhitelist) -> bool {
     }
 }
 
-async fn fetch_ip_whitelist(url: String) -> Result<HashSet<String>, reqwest::Error> {
-    let response = reqwest::get(url).await?;
-    let ips: Vec<String> = response.json().await?;
+async fn fetch_ip_whitelist(url: String) -> Result<HashSet<String>, String> {
+    let ips: Vec<String> = fetch_config(&url).await?;
     Ok(ips.into_iter().collect())
 }
 
@@ -107,10 +106,13 @@ async fn update_ip_whitelist_loop(ip_whitelist: IpWhitelist, whitelist_url: Stri
     loop {
         interval.tick().await;
 
-        if let Ok(new_ips) = fetch_ip_whitelist(whitelist_url.clone()).await {
-            if let Ok(mut ips) = ip_whitelist.write() {
-                *ips = new_ips;
+        match fetch_ip_whitelist(whitelist_url.clone()).await {
+            Ok(new_ips) => {
+                if let Ok(mut ips) = ip_whitelist.write() {
+                    *ips = new_ips;
+                }
             }
+            Err(err) => log::error!("Failed to refresh IP whitelist: {err}"),
         }
     }
 }
@@ -403,7 +405,11 @@ async fn main() -> io::Result<()> {
                 *ips = initial_ips;
             }
         }
-        Err(_) => {}
+        Err(err) => {
+            if !run_deps.config.ip_whitelist_url().is_empty() {
+                return Err(Error::new(ErrorKind::Other, format!("Failed to load initial IP whitelist: {err}")));
+            }
+        }
     }
 
     let app_state = web::Data::new(AppState {

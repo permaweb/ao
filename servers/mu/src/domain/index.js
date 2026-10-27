@@ -8,6 +8,7 @@ import warpArBundles from 'warp-arbundles'
 import { fromPromise } from 'hyper-async'
 import workerpool from 'workerpool'
 
+import { configCacheWith, fetchConfigWith, rateLimitConfigWith } from './clients/config-file.js'
 import cuClient from './clients/cu.js'
 import schedulerClient from './clients/scheduler.js'
 import signerClient from './clients/signer.js'
@@ -133,21 +134,24 @@ export const createApis = async (ctx) => {
   const RATE_LIMIT_FILE_URL = ctx.RATE_LIMIT_FILE_URL
   const PROCESS_WHITELIST_URL = ctx.PROCESS_WHITELIST_URL
 
-  let rateLimitFile = {}
+  const fetch = ctx.fetch
+  const fetchConfig = fetchConfigWith({ fetch })
+
+  const rateLimitConfig = rateLimitConfigWith({
+    read: fetchConfig,
+    location: RATE_LIMIT_FILE_URL
+  })
+  await rateLimitConfig.refresh()
   cron.schedule('*/10 * * * *', async () => {
-    if (!RATE_LIMIT_FILE_URL) return
-    const fetchedRateLimitFile = await fetch(RATE_LIMIT_FILE_URL)
-      .then((res) => res.json())
-      .catch(err => {
-        console.error('Error updating rate limit file', err)
-        return {}
-      })
-    rateLimitFile = fetchedRateLimitFile
-  }, { runOnInit: true })
-  const getRateLimitFile = () => rateLimitFile
+    try {
+      await rateLimitConfig.refresh()
+    } catch (err) {
+      console.error('Error updating rate limit file', err)
+    }
+  })
+  const getRateLimitFile = rateLimitConfig.get
 
   const logger = ctx.logger
-  const fetch = ctx.fetch
 
   const fetchWithCache = cuFetchWithCache({
     fetch,
@@ -182,19 +186,21 @@ export const createApis = async (ctx) => {
     compute: fromPromise(() => _metrics.metrics())
   }
 
-  let processesFile = {}
+  const processWhitelistConfig = configCacheWith({
+    read: fetchConfig,
+    location: PROCESS_WHITELIST_URL,
+    validate: value => value?.processes && typeof value.processes === 'object' && !Array.isArray(value.processes)
+  })
+  await processWhitelistConfig.refresh()
   cron.schedule('*/5 * * * *', async () => {
-    if (!PROCESS_WHITELIST_URL || PROCESS_WHITELIST_URL === '') return
-    const json = await fetch(PROCESS_WHITELIST_URL)
-      .then((res) => res.json())
-      .catch(err => {
-        console.error('Error updating hb processes file', err)
-        return {}
-      })
-    processesFile = { PROCESSES: json.processes || {} }
-  }, { runOnInit: true })
+    try {
+      await processWhitelistConfig.refresh()
+    } catch (err) {
+      console.error('Error updating hb processes file', err)
+    }
+  })
 
-  const fetchProcessWhitelist = () => processesFile.PROCESSES || null
+  const fetchProcessWhitelist = () => processWhitelistConfig.get()?.processes || null
 
   // Create trace database metrics
   MetricsClient.gaugeWith({})({
@@ -258,7 +264,7 @@ export const createApis = async (ctx) => {
             IP_WALLET_RATE_LIMIT: ctx.IP_WALLET_RATE_LIMIT,
             IP_WALLET_RATE_LIMIT_INTERVAL: ctx.IP_WALLET_RATE_LIMIT_INTERVAL,
             RATE_LIMIT_FILE_URL,
-            DEFAULT_RATE_LIMIT: rateLimitFile
+            DEFAULT_RATE_LIMIT: getRateLimitFile()
           }
         }
       }
