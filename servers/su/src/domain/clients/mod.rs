@@ -34,3 +34,6 @@ pub mod su_router;
 
 // top level whitelist 
 pub mod whitelist;
+
+// HTTP and IAM-authenticated S3 configuration files
+pub mod config_file;

@@ -1,5 +1,5 @@
 # Stage 1: Build the dynamic binary
-FROM rust:1.75.0 as builder
+FROM rust:1.94.1 as builder
 
 # Set the working directory in the container
 WORKDIR /usr/src/su
@@ -36,6 +36,9 @@ WORKDIR /app
 
 # Copy the binary from your local file system to the container
 COPY --from=builder /usr/src/su/target/release/su /app/su
+
+# AWS credential providers use the system trust store for HTTPS calls.
+COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
 
 # Copy necessary libraries from the builder
 COPY --from=builder /lib/x86_64-linux-gnu/ /lib/x86_64-linux-gnu/

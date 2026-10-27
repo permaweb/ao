@@ -62,6 +62,31 @@ There are a few environment variables that you can set:
 - `HB_ROUTER_URL`: the HB router url to default to when checking if target is a wallet
 - `ENABLE_HB_WALLET_CHECK`: whether to enable HB wallet check when checking if target is a wallet
 - `HB_GRAPHQL_URL`: the HB graphql cache url to use when retrieving a process message
+- `PROCESS_WHITELIST_URL`: HTTP(S) URL of the process whitelist JSON, refreshed every 5 minutes when configured
+- `RATE_LIMIT_FILE_URL`: HTTP(S) URL of the rate-limit JSON, refreshed every 10 minutes when configured
+
+### Private S3 configuration
+
+Keep the existing HTTPS URLs for configuration files. Public HTTP(S) and S3 sources
+continue to work without AWS credentials. An HTTP 403 from an AWS S3 REST endpoint
+triggers a retry signed with the MU's IAM role credentials. Presigned URLs are used
+unchanged. Signed requests do not follow redirects; use regional S3 REST URLs.
+
+The AWS credential provider chain supports EC2 instance profiles and ECS task roles,
+including automatic credential refresh. The region comes from the URL; for global
+endpoints, S3's bucket-region header, `AWS_REGION`, `AWS_DEFAULT_REGION`, and `us-east-1`
+are used in that order. No new URL format or static credentials in `.env` are required.
+The role must have `s3:GetObject` access to the exact process whitelist and rate-limit
+objects it reads. The MU does not read `mu-asg-ips.json`; that file is consumed by SU.
+See the [SU private S3 setup](../su/README.md#private-s3-configuration) for IAM policy
+and bucket migration details.
+
+Configured files are fetched and validated before startup completes. A failed initial
+load prevents startup. Later failures are logged and retain the last valid config,
+including when S3 denies access or returns invalid JSON. An unset URL leaves that
+configuration source disabled as before.
+Queue workers receive the validated rate limits at startup and use the same
+IAM-authenticated reader for their subsequent refreshes.
 
 
 

@@ -21,6 +21,7 @@ pub use logger::SuLog;
 pub use clients::metrics::PromMetrics;
 pub use clients::uploader::reupload_bundles;
 pub use clients::whitelist::FileUrlWhitelist;
+pub use clients::config_file::fetch_config;
 pub use core::flows;
 pub use core::router;
 pub use core::bytes;
