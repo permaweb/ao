@@ -21,6 +21,7 @@
         them the Processes' balance
 ]] --
 local json = require('json')
+local ao = require('.ao')
 
 --[[
   Initialize State
@@ -44,7 +45,7 @@ if not Logo then Logo = 'SBCCXwwecBlDqRLUjb8dYABExTJXLieawf7m2aBJ-KY' end
 --[[
   Info
 ]] --
-handlers.add('info', handlers.utils.hasMatchingTag('Action', 'Info'), function(msg)
+Handlers.add('info', Handlers.utils.hasMatchingTag('Action', 'Info'), function(msg)
   ao.send(
       { Target = msg.From, Tags = { Name = Name, Ticker = Ticker, Logo = Logo, Denomination = tostring(Denomination) } })
 end)
@@ -52,7 +53,7 @@ end)
 --[[
   Balance
 ]] --
-handlers.add('balance', handlers.utils.hasMatchingTag('Action', 'Balance'), function(msg)
+Handlers.add('balance', Handlers.utils.hasMatchingTag('Action', 'Balance'), function(msg)
   local bal = '0'
 
   -- If not Target is provided, then return the Senders balance
@@ -71,13 +72,13 @@ end)
 --[[
   Balances
 ]] --
-handlers.add('balances', handlers.utils.hasMatchingTag('Action', 'Balances'),
+Handlers.add('balances', Handlers.utils.hasMatchingTag('Action', 'Balances'),
              function(msg) ao.send({ Target = msg.From, Data = json.encode(Balances) }) end)
 
 --[[
   Transfer
 ]] --
-handlers.add('transfer', handlers.utils.hasMatchingTag('Action', 'Transfer'), function(msg)
+Handlers.add('transfer', Handlers.utils.hasMatchingTag('Action', 'Transfer'), function(msg)
   assert(type(msg.Tags.Recipient) == 'string', 'Recipient is required!')
   assert(type(msg.Tags.Quantity) == 'string', 'Quantity is required!')
 
@@ -119,7 +120,7 @@ end)
 --[[
  Mint
 ]] --
-handlers.add('mint', handlers.utils.hasMatchingTag('Action', 'Mint'), function(msg, env)
+Handlers.add('mint', Handlers.utils.hasMatchingTag('Action', 'Mint'), function(msg, env)
   assert(type(msg.Tags.Quantity) == 'string', 'Quantity is required!')
 
   if msg.From == env.Process.Id then
