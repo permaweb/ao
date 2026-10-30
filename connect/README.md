@@ -220,6 +220,28 @@ import {
 connect() == { spawn, message, result }
 ```
 
+In `mainnet` mode, `connect` also exposes the preloaded HyperBEAM RNG primitive.
+RNG Labs, a CipherPlay Inc. product, maintains the protocol and reference
+network; this adapter is distributed under this repository's license. The
+methods return the standard `Response` encoded as JSON.
+
+```js
+const { rng } = connect({ MODE: 'mainnet', URL: 'https://example-hb-node' })
+
+const verified = await rng.verifyRound({
+  publicKey: GROUP_PUBLIC_KEY_HEX,
+  beacon: BEACON_PROCESS_ID,
+  round,
+  signature: GROUP_SIGNATURE_HEX
+}).then(response => response.json())
+
+const derived = await rng.derive({
+  seed: verified.value,
+  counter: 0,
+  bytes: 32
+}).then(response => response.json())
+```
+
 #### `monitor`
 
 When using cron messages, ao users need a way to start injesting the messages,
