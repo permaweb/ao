@@ -75,6 +75,48 @@ export function requestWith(deps) {
   }
 }
 
+/**
+ * HyperBEAM RNG protocol client for the preloaded rng@1.0 device.
+ * RNG Labs, a CipherPlay Inc. product, maintains the protocol.
+ *
+ * @param {{ aoCore: { request: (args: any) => Promise<Response> } }} deps
+ */
+export function rngWith(deps) {
+  const request = requestWith(deps)
+  return {
+    /**
+     * @param {{ publicKey: string, beacon: string, round: number, signature: string }} args
+     */
+    verifyRound: ({ publicKey, beacon, round, signature }) => {
+      if (!/^[0-9a-fA-F]{96}$/.test(publicKey)) throw new TypeError('publicKey must be a 48-byte compressed G1 point in hex')
+      if (!/^[A-Za-z0-9_-]{43}$/.test(beacon)) throw new TypeError('beacon must be a 43-character AO process id')
+      if (!Number.isSafeInteger(round) || round < 1) throw new RangeError('round must be a positive integer')
+      if (!/^[0-9a-fA-F]{192}$/.test(signature)) throw new TypeError('signature must be a 96-byte compressed G2 point in hex')
+      return request({
+        path: '~rng@1.0/verify-bls',
+        accept: 'application/json',
+        'public-key': publicKey,
+        message: `hyperbeam/rng/v1|${beacon}|${round}`,
+        signature
+      })
+    },
+    /**
+     * @param {{ seed: string | Uint8Array, counter: number, bytes: number }} args
+     */
+    derive: ({ seed, counter, bytes }) => {
+      if (!Number.isSafeInteger(counter) || counter < 0) throw new RangeError('counter must be a non-negative integer')
+      if (!Number.isSafeInteger(bytes) || bytes < 1 || bytes > 1024) throw new RangeError('bytes must be an integer from 1 to 1024')
+      return request({
+        path: '~rng@1.0/derive',
+        accept: 'application/json',
+        seed,
+        counter,
+        bytes
+      })
+    }
+  }
+}
+
 export function spawnWith(deps) {
   return async (args) => {
     let scheduler = deps.scheduler

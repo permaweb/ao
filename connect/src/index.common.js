@@ -238,6 +238,7 @@ export function connectWith ({ createDataItemSigner, createSigner }) {
     })
 
     const request = CoreClient.requestWith(coreClientDeps)
+    const rng = CoreClient.rngWith(coreClientDeps)
     const spawn = CoreClient.spawnWith(coreClientDeps)
     const message = CoreClient.messageWith(coreClientDeps)
     const result = CoreClient.resultWith(coreClientDeps)
@@ -252,6 +253,7 @@ export function connectWith ({ createDataItemSigner, createSigner }) {
       results,
       dryrun,
       request,
+      rng,
       createSigner: mainnetSigner,
       createDataItemSigner: mainnetDataItemSigner,
       getMessages,
